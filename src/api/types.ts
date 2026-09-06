@@ -174,6 +174,9 @@ export interface IBidTicket {
   updated?: string;
 }
 
+/** Payload for POST …/tickets/:id — the server owns `created`/`updated`, and `ticketType` is immutable once the ticket has purchases. */
+export type IBidTicketUpdate = Omit<IBidTicket, 'created' | 'updated' | 'ticketType'>;
+
 /** POST checkin/v1/events/:eventId/guests/:guestId/ticketPurchases (BARE ARRAY; HTTP 200 even when `code` is "soldOut") */
 export interface CheckinTicketPurchaseResult {
   id: string; // purchase id — pass to cancelTicketPurchase

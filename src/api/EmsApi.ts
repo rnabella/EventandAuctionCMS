@@ -8,6 +8,7 @@ import {
   DonationReportRow,
   GuestCheckout,
   IBidTicket,
+  IBidTicketUpdate,
   PaymentRecord,
   Totals,
 } from './types';
@@ -102,8 +103,13 @@ export class EmsApi {
   readonly tickets = {
     get: (eventId: string, ticketId: string) => this.http.get<IBidTicket>(`v1/iBid/events/${eventId}/tickets/${ticketId}`),
 
-    /** Full-record update — send the whole ticket (as returned by `get`) with the changed fields. */
-    update: (eventId: string, ticketId: string, ticket: IBidTicket) =>
+    /**
+     * Full-record update — send the whole ticket (as returned by `get`) with
+     * the changed fields. Send the record from `get` minus
+     * `created`/`updated`/`ticketType` — those are rejected (the last one
+     * whenever the ticket already has purchases).
+     */
+    update: (eventId: string, ticketId: string, ticket: IBidTicketUpdate) =>
       this.http.post<unknown>(`v1/iBid/events/${eventId}/tickets/${ticketId}`, ticket),
   };
 
