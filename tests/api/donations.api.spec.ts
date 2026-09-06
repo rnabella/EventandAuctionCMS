@@ -14,10 +14,11 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
     const before = await ems.reports.totals(e2eEvent.id);
 
     const result = await ems.checkin.makeDonation(e2eEvent.id, e2eEvent.apiGuestId, { pledgeId, amount: 1000 });
-    expect(result).toMatchObject({ code: 'accepted', amount: 1000, pledgeId });
-    expect(result.id).toMatch(UUID);
 
     try {
+      expect(result).toMatchObject({ code: 'accepted', amount: 1000, pledgeId });
+      expect(result.id).toMatch(UUID);
+
       await expect
         .poll(async () => donationRaised(await ems.reports.totals(e2eEvent.id)) - donationRaised(before), { timeout: 15_000 })
         .toBe(1000);
@@ -39,12 +40,15 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
   test('cancelling the same donation twice is idempotent', async ({ ems, lite, e2eEvent }) => {
     const pledgeId = (await lite.pledgeItem(e2eEvent.id)).id;
     const result = await ems.checkin.makeDonation(e2eEvent.id, e2eEvent.apiGuestId, { pledgeId, amount: 1000 });
-    expect(result.code).toBe('accepted');
 
-    const first = await ems.checkin.cancelDonation(e2eEvent.id, e2eEvent.apiGuestId, result.id);
-    const second = await ems.checkin.cancelDonation(e2eEvent.id, e2eEvent.apiGuestId, result.id);
-    expect(first.id).toBe(result.id);
-    expect(second.id).toBe(result.id);
+    try {
+      expect(result.code).toBe('accepted');
+      const first = await ems.checkin.cancelDonation(e2eEvent.id, e2eEvent.apiGuestId, result.id);
+      expect(first.id).toBe(result.id);
+    } finally {
+      const second = await ems.checkin.cancelDonation(e2eEvent.id, e2eEvent.apiGuestId, result.id);
+      expect(second.id).toBe(result.id);
+    }
   });
 });
 
