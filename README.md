@@ -165,6 +165,21 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
   `invalid_amount`; unknown pledge / donation → 404 `notFound`; bad token → 401.
 - **Public Lite API** (`tests/api/lite-public.api.spec.ts`): event takes Stripe
   card payments in USD; the donation item is active with the expected presets.
+- **Tickets — donor journey (Lite UI + EMS API)** (`tests/e2e/tickets.spec.ts`):
+  a new donor selects the $20 fixture ticket, registers with a Stripe test
+  card, walks the 4-step booking wizard (booking details → "Add later" instead
+  of assigning/sending tickets → both fee toggles off), pays exactly $20.00 and
+  sees "Thank you for your order!"; the EMS API then shows a paid
+  `ticket_purchase` transaction for that ticket, an empty basket, unchanged
+  fundraising totals (tickets aren't counted there), and "My Tickets" lists
+  the assigned ticket.
+- **Tickets — check-in API** (`tests/api/tickets.api.spec.ts`): reserve → $20
+  line in the guest basket → cancel → basket restored; `count: 0` → 422;
+  unknown ticket / purchase → 404 `notFound`; the cancel-returns-500 bug
+  (sc-98155) is pinned with `test.fail` so it flips visibly when fixed.
+- **Ticket fixture** — `E2E_TICKET_ID` names a pre-created ticket; `api-setup`
+  keeps it sellable through the iBid API (stock ≥ 100, sale end far future,
+  active, visible) so the journey never hits "Sold Out" or an expired sale.
 
 ### Known limitations / follow-up work
 
@@ -257,6 +272,8 @@ Promotion Codes, Guests, and Tables are all handled.
   around in the API test suite by asserting deltas on creation only and
   relying on `reports/totals` (which does behave correctly) to verify a
   cancellation, rather than expecting the report's row count to fall back down.
+- **Check-in `ticketPurchases/cancel` returns HTTP 500 although the purchase is
+  cancelled** (3/3 reproductions, server log IDs recorded) — filed as sc-98155.
 
 ### Testing gotchas worth knowing before extending this further
 
@@ -444,3 +461,29 @@ just enough to avoid it.
   ("Donation amount:$10") even though the accessibility tree shows one —
   assert with a whitespace-tolerant, digit-anchored regex
   (`Donation amount:\s*\$10(?!\d)`), not a literal string.
+- **A ticket created through the CMS is "Sold Out" until you set its Limit** —
+  `numberAvailable` defaults to 0 and the sale window to 24 hours. The
+  fixture is repaired automatically by `api-setup` (`src/api/ticketFixture.ts`)
+  via `POST /ems/v1/iBid/events/:e/tickets/:id` (send the record back minus
+  `created`, `updated` and `ticketType`, which the server rejects).
+- **Unpaid ticket reservations expire after ~10–15 minutes, and reloading the
+  booking wizard resets it to Step 1** — never `page.reload()` mid-booking; pay
+  in one pass.
+- **Step 1's "Continue" is a sibling of its accordion region, not inside it**;
+  Step 2's is inside. Step 3 hides everything behind two radios — click the
+  visible label ("No, I'll assign all tickets myself"), then "Add later" books
+  the ticket to the purchaser without emailing anyone.
+- **Step 4 has two fee toggles** (`applyTicketBookingFees` $4.00,
+  `applyPremiums` $0.95) and Step 1 has its own `applyPremiums` — scope to the
+  Step 4 region or you hit a strict-mode clash. Both off → total $20.00.
+- **Tickets don't appear in `reports/totals`** (no tickets bucket) — verify via
+  `guests/:g/payments/transactions` (`recordType: "ticket_purchase"`, plus a
+  zero `ticket_booking_fee` line) and the basket, not the totals.
+- **Check-in `POST …/ticketPurchases` returns a bare array with HTTP 200 even
+  on failure (`code: "soldOut"`)**; `…/ticketPurchases/cancel` returns HTTP
+  500 but does cancel (sc-98155).
+- **Step 4's fee-amount cells render blank for up to ~1.5 s and then settle to
+  a nondeterministic default** (sometimes both fees on, sometimes off).
+  `TicketBookingPage.setFees` waits for each amount cell to be non-empty
+  before reading the toggle and asserts the cell's amount after toggling —
+  read the amount cell, not the checkbox.
