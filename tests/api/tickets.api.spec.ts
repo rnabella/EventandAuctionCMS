@@ -1,6 +1,8 @@
 import { test, expect } from '../fixtures';
 import { SELLABLE_MIN_AVAILABLE, SELLABLE_MIN_DAYS_LEFT } from '../../src/api/ticketFixture';
 import { ApiError } from '../../src/api/http';
+import type { EmsApi } from '../../src/api/EmsApi';
+import type { GuestCheckout } from '../../src/api/types';
 
 const DAY_MS = 86_400_000;
 
@@ -16,7 +18,7 @@ test.describe('EMS iBid API > fixture ticket', () => {
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 
 /** sc-98155: cancel answers 500 but does cancel. Swallow exactly that; anything else is a real failure. */
-async function cancelTicketPurchaseTolerating500(ems: import('../../src/api/EmsApi').EmsApi, eventId: string, guestId: string, purchaseId: string) {
+async function cancelTicketPurchaseTolerating500(ems: EmsApi, eventId: string, guestId: string, purchaseId: string) {
   try {
     await ems.checkin.cancelTicketPurchase(eventId, guestId, purchaseId);
   } catch (e) {
@@ -24,11 +26,17 @@ async function cancelTicketPurchaseTolerating500(ems: import('../../src/api/EmsA
   }
 }
 
+// The shared QA guest's basket is also written by the parallel donations spec, so `grandTotal`
+// deltas are not safe under parallel workers — assert on this ticket's lines only.
+const ticketLinesTotal = (c: GuestCheckout, ticketId: string) =>
+  c.ticketPurchases.filter((t) => t.itemId === ticketId).reduce((sum, t) => sum + t.totalAmount, 0);
+
 // Reserves and cancels real ticket purchases for the QA guest — serial, self-cleaning.
 test.describe.serial('EMS check-in API > ticket purchases (reserve / cancel)', () => {
   test('reserving one ticket puts a $20 line in the guest basket; cancelling removes it', async ({ ems, e2eEvent }) => {
     const before = await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId);
     const linesBefore = before.ticketPurchases.filter((t) => t.itemId === e2eEvent.ticketId).length;
+    const ticketTotalBefore = ticketLinesTotal(before, e2eEvent.ticketId);
 
     const [result] = await ems.checkin.purchaseTickets(e2eEvent.id, e2eEvent.apiGuestId, { ticketId: e2eEvent.ticketId, count: 1 });
     try {
@@ -43,7 +51,7 @@ test.describe.serial('EMS check-in API > ticket purchases (reserve / cancel)', (
       expect(during.ticketPurchases).toContainEqual(
         expect.objectContaining({ itemId: e2eEvent.ticketId, purchaseId: result.id, itemCount: 1, totalAmount: 2000 }),
       );
-      expect(during.grandTotal - before.grandTotal).toBe(2000);
+      expect(ticketLinesTotal(during, e2eEvent.ticketId) - ticketTotalBefore).toBe(2000);
     } finally {
       await cancelTicketPurchaseTolerating500(ems, e2eEvent.id, e2eEvent.apiGuestId, result.id);
     }
@@ -54,7 +62,7 @@ test.describe.serial('EMS check-in API > ticket purchases (reserve / cancel)', (
         return c.ticketPurchases.filter((t) => t.itemId === e2eEvent.ticketId).length;
       }, { timeout: 15_000 })
       .toBe(linesBefore);
-    expect((await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId)).grandTotal).toBe(before.grandTotal);
+    expect(ticketLinesTotal(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId)).toBe(ticketTotalBefore);
   });
 
   test('cancelling a ticket purchase should return 200 (known bug sc-98155: returns 500)', async ({ ems, e2eEvent }) => {
