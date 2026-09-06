@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { EmsApi } from '../src/api/EmsApi';
+import { LiteApi } from '../src/api/LiteApi';
 import { readEmsToken } from '../src/api/auth';
 import { env } from '../src/config/env';
 
@@ -13,6 +14,7 @@ export interface E2EEvent {
 type FundraisingFixtures = {
   ems: EmsApi;
   e2eEvent: E2EEvent;
+  lite: LiteApi;
 };
 
 /**
@@ -25,6 +27,9 @@ export const test = base.extend<FundraisingFixtures>({
   },
   e2eEvent: async ({}, use) => {
     await use({ id: env.e2e.eventId, liteUiBaseUrl: env.e2e.liteUiBaseUrl, apiGuestId: env.e2e.apiGuestId });
+  },
+  lite: async ({ request }, use) => {
+    await use(new LiteApi(request));
   },
 });
 
