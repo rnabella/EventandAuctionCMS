@@ -1,12 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 import { env } from './src/config/env';
 
+// Detect `--project=lite-e2e` / `--project lite-e2e` on the CLI so `workers`
+// (a global, not per-project, setting) can be forced to 1 whenever the
+// lite-e2e project is selected — see the `lite-e2e` project below for why.
+const runsLiteE2E = process.argv.some((arg) => /(^|[=\s])lite-e2e$/.test(arg) || arg === 'lite-e2e');
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 4 : undefined,
+  workers: runsLiteE2E ? 1 : process.env.CI ? 4 : undefined,
   // The shared Integration event's list pages (Tickets, Auction Items, ...)
   // accumulate rows every run by design (see README's test data policy) and
   // render noticeably slower as a result — the default 30s test timeout isn't
@@ -76,8 +81,14 @@ export default defineConfig({
     {
       // Donor journeys on the public Lite UI (tests/e2e), verified through the
       // EMS API. Every journey moves the same event totals, so these must never
-      // interleave: fullyParallel is off here AND `npm run test:e2e` passes
-      // --workers=1 (Playwright has no per-project worker cap).
+      // interleave — and a second spec file (Playwright can't serialize across
+      // files) would run in parallel with the first under this project's
+      // `fullyParallel: false` alone, since that only serialises tests *within*
+      // one file. The actual guarantee is workers=1: enforced by the global
+      // `workers` above whenever `lite-e2e` is selected on the CLI (via
+      // `runsLiteE2E`), and belt-and-braces by the `--workers=1` flag on the
+      // `test:e2e`/`test:e2e:headed` npm scripts. `fullyParallel: false` stays
+      // set as a second layer for within-file ordering, but is not the guarantee.
       name: 'lite-e2e',
       testDir: './tests/e2e',
       fullyParallel: false,

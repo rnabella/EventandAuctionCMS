@@ -39,13 +39,46 @@ export class EmsApi {
   readonly reports = {
     totals: (eventId: string) => this.http.get<Totals>(`checkin/v1/events/${eventId}/reports/totals`),
 
-    /** Without `status=ACTIVE` the report also lists cancelled donations. */
+    /**
+     * `status` is accepted but, verified live on 2026-09-06, has NO effect:
+     * `ACTIVE`, `CANCELLED`, a bogus value, and omitting it entirely all
+     * return the identical row set, always including cancelled donations —
+     * cancelling a donation reverses `reports/totals` but never removes its
+     * row here, however long you poll. Kept as a documented (probably
+     * server-side no-op) parameter rather than removed, in case a future
+     * environment/version honours it; don't rely on it to exclude cancelled
+     * rows in the meantime — there is currently no way to do that via this
+     * endpoint.
+     */
     donations: (eventId: string, opts: { status?: 'ACTIVE'; offset?: number; limit?: number } = {}) =>
       this.http.get<DonationReportRow[]>(`checkin/v1/events/${eventId}/reports/donation`, {
         status: opts.status ?? 'ACTIVE',
         offset: opts.offset ?? 0,
         limit: opts.limit ?? 50,
       }),
+
+    /**
+     * Fetches every row of the donation report, paging past `donations()`'s
+     * default `limit: 50`. Needed because this report's `totalCount` is
+     * always 0 (there's no way to size a single page up front), and the E2E
+     * event gains one more donation row per e2e/API run — cancelled or not,
+     * see `donations()`'s docblock — so a fixed-size single page is a fuse
+     * that eventually stops containing the row a test is looking for. Pages
+     * with `pageSize`, stopping at the first short/empty page; capped at 50
+     * pages (5,000 rows at the default size) as a guard against an
+     * unexpected server-side bug looping forever.
+     */
+    allDonations: async (eventId: string, pageSize = 100): Promise<DonationReportRow[]> => {
+      const rows: DonationReportRow[] = [];
+      const MAX_PAGES = 50;
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const offset = page * pageSize;
+        const batch = await this.reports.donations(eventId, { offset, limit: pageSize });
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+      }
+      return rows;
+    },
   };
 
   readonly guests = {

@@ -75,7 +75,7 @@ test.describe.serial('Lite UI > Donations (donor journey, verified via the EMS A
     expect(outstanding.grandTotal).toBe(0);
     expect(outstanding.donations).toEqual([]);
 
-    const rows = await ems.reports.donations(e2eEvent.id);
+    const rows = await ems.reports.allDonations(e2eEvent.id);
     expect(rows).toContainEqual(expect.objectContaining({ name: donorName, totalValue: amount, qty: 1 }));
 
     const after = await ems.reports.totals(e2eEvent.id);

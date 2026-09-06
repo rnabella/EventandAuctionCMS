@@ -42,7 +42,7 @@ cp .env.example .env   # then fill in real credentials/URLs
 ## Running tests
 
 ```bash
-npm test              # headless, all projects
+npm test              # checklist suite (setup + cms-auth + cms-chromium)
 npm run test:headed   # headed (visible browser)
 npm run test:ui       # Playwright UI mode
 npm run report        # open the last HTML report
@@ -62,23 +62,34 @@ These run against a **separate, clean E2E event** (`E2E_EVENT_ID` /
 `TEST_EVENT_ID`, whose accumulating rows would keep moving the totals these
 tests assert deltas on. Design: `docs/superpowers/specs/2026-09-06-fundraising-outcome-suite-design.md`.
 
+The pure-API donation tests (`tests/api/donations.api.spec.ts`) additionally
+depend on `E2E_API_GUEST_ID` — a manual precondition, not something any setup
+project creates. It must be a guest **registered on the E2E event with a card
+pre-authorised**; it was created once by hand through the Lite UI registration
+flow on 2026-09-06 ("QA E2E Donor 1335"). If it's ever deleted, the API
+donation tests fail with a 404 `notFound`. To recreate it: run the Lite
+registration flow once (the `lite-e2e` donor journey does exactly this, and
+logs the new guest id in its trace) and paste the id into `.env`. A later
+slice should have `api-setup` create this guest idempotently instead of
+relying on a hand-created one.
+
 ## Structure
 
 ```
 src/
   config/     - environment config loader (reads .env)
   pages/      - Page Object Model classes, one per CMS/Lite UI screen
+    lite/     - Page Object Model classes for the public donor-facing Lite UI
   data/       - static test data / expected-state fixtures
   api/        - HttpClient + EmsApi (back office) + LiteApi (public) clients, typed responses
-  pages/lite/ - Page Object Model classes for the public donor-facing Lite UI
   utils/      - money formatting (cents -> "$10" / "$10.00")
 tests/
-  setup/        - auth setup project; logs in once and saves storageState
-  maintenance/   - cleanup tooling, run via `npm run cleanup` only (see above)
+  setup/             - auth setup project; logs in once and saves storageState
+    api.setup.ts     - EMS API login; writes playwright/.auth/ems-token.json
+  maintenance/       - cleanup tooling, run via `npm run cleanup` only (see above)
   cms/
-    auth/       - login flow tests (run unauthenticated, no storageState)
-    checklist/  - tests for authenticated CMS pages (use the saved storageState)
-  setup/api.setup.ts - EMS API login; writes playwright/.auth/ems-token.json
+    auth/            - login flow tests (run unauthenticated, no storageState)
+    checklist/       - tests for authenticated CMS pages (use the saved storageState)
   fixtures.ts        - `ems`, `lite`, `e2eEvent` fixtures for tests/api + tests/e2e
   api/               - pure HTTP tests (project `api`)
   e2e/               - Lite UI donor journeys verified via the EMS API (project `lite-e2e`)
@@ -237,6 +248,15 @@ Promotion Codes, Guests, and Tables are all handled.
   doesn't match any element's `id` in the DOM — a real accessibility defect
   (the visible label isn't actually associated with its input). Worked around
   by selecting on `input[name="themeColour"]` instead of the label.
+- **`checkin/v1/events/:id/reports/donation`'s `status` query parameter does
+  nothing.** Passing `status=ACTIVE`, `status=CANCELLED`, a bogus value, or
+  omitting it entirely all return the exact same rows, cancelled donations
+  included — cancelling a donation correctly reverses `reports/totals` but
+  never removes that donation's row from this report, no matter how long you
+  poll (verified live over 30s). Worth reporting to the product team; worked
+  around in the API test suite by asserting deltas on creation only and
+  relying on `reports/totals` (which does behave correctly) to verify a
+  cancellation, rather than expecting the report's row count to fall back down.
 
 ### Testing gotchas worth knowing before extending this further
 
@@ -406,13 +426,18 @@ just enough to avoid it.
 - **`reports/payments` stayed `paymentsTaken: 0` after a real Stripe payment**,
   so it is not used as an oracle; the per-guest `payments/transactions` list
   and `reports/totals` are.
-- **`reports/donation` lists cancelled donations too** unless `status=ACTIVE`
-  is passed, and its `totalCount` is always 0 — count `entity` rows instead.
+- **`reports/donation`'s `status` filter has no effect at all** (verified
+  live 2026-09-06: `ACTIVE`, `CANCELLED`, a bogus value, and omitting it
+  entirely all return the identical rows) — it always lists cancelled
+  donations alongside active ones, and cancelling never removes a row, however
+  long you poll. `totalCount` is also always 0 — count `entity` rows instead,
+  and page past the default `limit: 50` (`EmsApi.reports.allDonations`) since
+  the event gains a row every run and old rows never drop off.
 - **Check-in `POST .../donations` returns HTTP 200 even when it rejects**
   (`code: "invalid_amount"`); only pledge/guest lookups fail with 404. It also
   accepted $5 on a pledge whose UI minimum is $10 — the minimum is enforced
   client-side only (worth raising with the product team).
-- **"Download receipt" on the confirmation page is a `<a>` link, not a
+- **"Download receipt" on the confirmation page is an `<a>` link, not a
   button** — `getByRole('button', …)` finds nothing; use
   `getByRole('link', …)`. It is never clicked by tests.
 - **The confirmation page's raw DOM text has no space after the colon**
