@@ -1,6 +1,6 @@
 import { APIRequestContext } from '@playwright/test';
 import { env } from '../config/env';
-import { ApiError, HttpClient } from './http';
+import { HttpClient } from './http';
 import { CancelledDonation, CheckinDonationResult, DonationReportRow, GuestCheckout, PaymentRecord, Totals } from './types';
 
 /**
@@ -24,12 +24,12 @@ export class EmsApi {
     password: string,
     baseUrl: string = env.api.emsBaseUrl,
   ): Promise<string> {
-    const path = 'checkin/v1/auth/login';
-    const response = await request.post(`${baseUrl}/${path}`, { data: { username, password, version: 0 } });
-    if (!response.ok()) {
-      throw new ApiError('POST', path, response.status(), undefined, await response.text());
-    }
-    const body = (await response.json()) as { authToken: string; twoFactorRequired: boolean };
+    const http = new HttpClient(request, baseUrl);
+    const body = await http.post<{ authToken: string; twoFactorRequired: boolean }>('checkin/v1/auth/login', {
+      username,
+      password,
+      version: 0,
+    });
     if (body.twoFactorRequired) {
       throw new Error('EMS login requires 2FA for this account; the API suite needs a non-2FA test admin.');
     }

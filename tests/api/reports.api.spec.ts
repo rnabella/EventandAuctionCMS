@@ -17,7 +17,10 @@ test.describe('EMS API > auth and reports', () => {
   });
 
   test('rejects a wrong password with HTTP 401', async ({ request }) => {
-    await expect(EmsApi.login(request, env.cms.username, 'definitely-wrong')).rejects.toMatchObject({ status: 401 });
+    await expect(EmsApi.login(request, env.cms.username, 'definitely-wrong')).rejects.toMatchObject({
+      status: 401,
+      code: 'unauthorized',
+    });
   });
 
   test('rejects an invalid bearer token with 401 unauthorized', async ({ request }) => {
