@@ -117,4 +117,27 @@ export class TicketBookingPage extends LiteBasePage {
   async expectTotal(amountCents: number): Promise<void> {
     await expect(this.reviewAndPayment).toContainText(`Total $${usd(amountCents)}`);
   }
+
+  /**
+   * "Pay with Card" reveals the saved card (pre-authorised at registration);
+   * "Buy Tickets" (`name="pay"`) charges it — POST …/guests/:id/payment →
+   * paymentStatus "paid" — and navigates to the order confirmation.
+   */
+  async payWithSavedCard(last4 = '4242'): Promise<void> {
+    await this.reviewAndPayment.getByRole('button', { name: /Pay with Card/ }).click();
+    await expect(
+      this.reviewAndPayment.getByRole('listbox', { name: 'Select card' }).getByRole('option', { name: new RegExp(`ending with ${last4}`) }),
+    ).toBeVisible();
+    const [response] = await Promise.all([
+      this.page.waitForResponse(
+        (r) => r.request().method() === 'POST' && /\/lite\/v1\/events\/[^/]+\/guests\/[^/]+\/payment(\?|$)/.test(r.url()),
+        { timeout: 60_000 },
+      ),
+      this.reviewAndPayment.locator('button[name="pay"]').click(),
+    ]);
+    const body = (await response.json()) as { code: string; message: string; entity: { paymentStatus: string } | null };
+    if (body.code !== 'ok' || body.entity?.paymentStatus !== 'paid') {
+      throw new Error(`Ticket payment failed: ${body.code}/${body.entity?.paymentStatus} — ${body.message}`);
+    }
+  }
 }
