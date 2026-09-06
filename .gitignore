@@ -14,3 +14,6 @@ dist/
 # Claude Code machine-local files (settings.local.json can contain credentials in permission rules)
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Subagent-driven-development scratch (ledgers, briefs, review packages)
+.superpowers/
