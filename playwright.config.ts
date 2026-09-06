@@ -61,7 +61,11 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
-    // Firefox/WebKit and Lite UI-specific projects are added in Phase 2 once the
-    // architecture for cross-browser and multi-app config is agreed.
+    {
+      // Pure HTTP tests against the EMS / Lite APIs (tests/api). No browser.
+      // Absolute URLs come from env.api.*, so the global CMS baseURL is unused here.
+      name: 'api',
+      testDir: './tests/api',
+    },
   ],
 });
