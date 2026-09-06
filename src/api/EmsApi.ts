@@ -1,7 +1,16 @@
 import { APIRequestContext } from '@playwright/test';
 import { env } from '../config/env';
 import { HttpClient } from './http';
-import { CancelledDonation, CheckinDonationResult, DonationReportRow, GuestCheckout, PaymentRecord, Totals } from './types';
+import {
+  CancelledDonation,
+  CheckinDonationResult,
+  CheckinTicketPurchaseResult,
+  DonationReportRow,
+  GuestCheckout,
+  IBidTicket,
+  PaymentRecord,
+  Totals,
+} from './types';
 
 /**
  * The EMS ("back office") API at env.api.emsBaseUrl. Authenticated with the
@@ -89,6 +98,15 @@ export class EmsApi {
       this.http.get<GuestCheckout>(`checkin/v1/events/${eventId}/guests/${guestId}/payments/checkout`),
   };
 
+  /** The CMS's own ticket records (the "iBid" API the CMS Next Tickets pages save through). */
+  readonly tickets = {
+    get: (eventId: string, ticketId: string) => this.http.get<IBidTicket>(`v1/iBid/events/${eventId}/tickets/${ticketId}`),
+
+    /** Full-record update — send the whole ticket (as returned by `get`) with the changed fields. */
+    update: (eventId: string, ticketId: string, ticket: IBidTicket) =>
+      this.http.post<unknown>(`v1/iBid/events/${eventId}/tickets/${ticketId}`, ticket),
+  };
+
   /** Staff-side ("check-in") actions performed on a guest's behalf. */
   readonly checkin = {
     /** Counts toward reports/totals immediately (no payment step) — same as a Lite UI placement. */
@@ -105,5 +123,21 @@ export class EmsApi {
       this.http.post<CancelledDonation>(`checkin/v1/events/${eventId}/guests/${guestId}/donations/cancel`, {
         id: donationId,
       }),
+
+    /**
+     * Reserves tickets for a guest (unpaid; lands in the guest's checkout basket).
+     * Returns a BARE array, and HTTP 200 even when rejected (`code: "soldOut"`).
+     */
+    purchaseTickets: (eventId: string, guestId: string, body: { ticketId: string; count: number }) =>
+      this.http.post<CheckinTicketPurchaseResult[]>(`checkin/v1/events/${eventId}/guests/${guestId}/ticketPurchases`, body),
+
+    /**
+     * KNOWN BUG sc-98155 (verified 2026-09-06): this endpoint answers HTTP 500
+     * ("There was an error processing your request…") yet the purchase IS cancelled
+     * (gone from payments/checkout). Callers must catch ApiError status 500 and
+     * verify via the basket. Unknown id → 404 notFound as expected.
+     */
+    cancelTicketPurchase: (eventId: string, guestId: string, purchaseId: string) =>
+      this.http.post<unknown>(`checkin/v1/events/${eventId}/guests/${guestId}/ticketPurchases/cancel`, { id: purchaseId }),
   };
 }

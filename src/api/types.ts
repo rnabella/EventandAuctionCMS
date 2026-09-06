@@ -88,7 +88,7 @@ export interface PaymentRecord {
 export interface GuestCheckout {
   donations: Array<{ itemId: string; purchaseId: string; title: string; totalAmount: number }>;
   bids: unknown[];
-  ticketPurchases: unknown[];
+  ticketPurchases: CheckoutTicketPurchase[];
   totalAmount: number;
   totalPremiumAmount: number;
   subTotal: number;
@@ -128,4 +128,73 @@ export interface PledgeItem {
   minimumOnly: boolean;
   target: number;
   total: number;
+}
+
+/** GET lite/v1/events/:eventId/tickets?showHidden=false (enveloped array) */
+export interface LiteTicket {
+  id: string;
+  title: string;
+  type: 'individual' | string;
+  price: number; // cents
+  fee: number;
+  numberAvailable: number; // 0 = sold out on the public site
+  maxPerOrder: number;
+  startTime: string;
+  endTime: string; // ISO; sales stop after this
+  seatCount: number;
+  status: 'active' | string;
+  hidden: boolean;
+  itemQuestions: unknown[];
+}
+
+/** GET/POST ems/v1/iBid/events/:eventId/tickets/:ticketId (enveloped) — the CMS's own ticket record */
+export interface IBidTicket {
+  id: string;
+  eventId: string;
+  title: string;
+  status: 'active' | string;
+  startTime: string;
+  endTime: string;
+  sortNumber: number;
+  externalId: string;
+  hidden: boolean;
+  price: number;
+  numberAvailable: number;
+  maxPerOrder: number;
+  fee: number;
+  ticketType: string;
+  seatCount: number;
+  itemQuestions: unknown[];
+  estimate: number;
+  promotionCodeIds: string[];
+  enableGuestDetailCutOffTime: boolean;
+  guestDetailCutOffTime: string;
+  guestDetailCutOffCopy: string;
+  created?: string;
+  updated?: string;
+}
+
+/** POST checkin/v1/events/:eventId/guests/:guestId/ticketPurchases (BARE ARRAY; HTTP 200 even when `code` is "soldOut") */
+export interface CheckinTicketPurchaseResult {
+  id: string; // purchase id — pass to cancelTicketPurchase
+  ticketId: string;
+  code: 'accepted' | 'soldOut' | string;
+  message: string;
+  amount: number;
+  count: number;
+  available: number;
+  bought: number;
+}
+
+/** One line of GuestCheckout.ticketPurchases */
+export interface CheckoutTicketPurchase {
+  itemId: string; // ticket id
+  purchaseId: string;
+  title: string;
+  itemNumber: string;
+  itemAmount: number;
+  itemCount: number;
+  totalAmount: number;
+  baseTotal: number;
+  subTotal: number;
 }

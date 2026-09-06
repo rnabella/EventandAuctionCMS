@@ -9,6 +9,8 @@ export interface E2EEvent {
   liteUiBaseUrl: string;
   /** A registered, card-verified guest used by the pure-API donation tests. */
   apiGuestId: string;
+  /** The pre-created "QA E2E Ticket" ($20) that api-setup keeps sellable. */
+  ticketId: string;
 }
 
 type FundraisingFixtures = {
@@ -26,7 +28,12 @@ export const test = base.extend<FundraisingFixtures>({
     await use(new EmsApi(request, readEmsToken()));
   },
   e2eEvent: async ({}, use) => {
-    await use({ id: env.e2e.eventId, liteUiBaseUrl: env.e2e.liteUiBaseUrl, apiGuestId: env.e2e.apiGuestId });
+    await use({
+      id: env.e2e.eventId,
+      liteUiBaseUrl: env.e2e.liteUiBaseUrl,
+      apiGuestId: env.e2e.apiGuestId,
+      ticketId: env.e2e.ticketId,
+    });
   },
   lite: async ({ request }, use) => {
     await use(new LiteApi(request));

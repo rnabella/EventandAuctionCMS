@@ -1,7 +1,7 @@
 import { APIRequestContext } from '@playwright/test';
 import { env } from '../config/env';
 import { HttpClient } from './http';
-import { LiteEvent, PledgeItem } from './types';
+import { LiteEvent, LiteTicket, PledgeItem } from './types';
 
 /**
  * The public Lite back end the donor-facing site itself calls. Reads need no
@@ -21,5 +21,10 @@ export class LiteApi {
   /** The campaign's single donation ("pledge") item, including its preset amounts. */
   pledgeItem(eventId: string) {
     return this.http.get<PledgeItem>(`v1/events/${eventId}/pledges/campaignItem`);
+  }
+
+  /** Tickets currently shown on the public site (hidden ones excluded). */
+  tickets(eventId: string) {
+    return this.http.get<LiteTicket[]>(`v1/events/${eventId}/tickets`, { showHidden: 'false' });
   }
 }

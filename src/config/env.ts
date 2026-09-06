@@ -33,6 +33,7 @@ export const env = {
     eventId: required('E2E_EVENT_ID'),
     liteUiBaseUrl: required('E2E_LITE_UI_BASE_URL').replace(/\/+$/, ''),
     apiGuestId: required('E2E_API_GUEST_ID'),
+    ticketId: required('E2E_TICKET_ID'),
   },
 
   api: {

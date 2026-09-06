@@ -21,4 +21,14 @@ test.describe('Lite public API > E2E event', () => {
     expect(activeAmounts).toContain(1000);
     expect(activeAmounts).toEqual(expect.arrayContaining([1000, 5000, 10000, 25000, 100000]));
   });
+
+  test('the fixture ticket is on sale: active, $20, in stock, sale end in the future', async ({ lite, e2eEvent }) => {
+    const tickets = await lite.tickets(e2eEvent.id);
+    const ticket = tickets.find((t) => t.id === e2eEvent.ticketId);
+    expect(ticket, `ticket ${e2eEvent.ticketId} not listed on the public site`).toBeDefined();
+    expect(ticket).toMatchObject({ status: 'active', hidden: false, price: 2000, type: 'individual' });
+    expect(ticket!.numberAvailable).toBeGreaterThanOrEqual(1);
+    expect(ticket!.maxPerOrder).toBeGreaterThanOrEqual(1);
+    expect(Date.parse(ticket!.endTime)).toBeGreaterThan(Date.now());
+  });
 });
