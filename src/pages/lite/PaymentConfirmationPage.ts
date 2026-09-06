@@ -18,8 +18,8 @@ export class PaymentConfirmationPage extends LiteBasePage {
     await expect(main).toContainText('Thank You! Your payment has been successful.');
     // The DOM has no text-node space between the label and the figure (e.g. "Donation amount:$10"),
     // even though the accessibility tree reports "Donation amount: $10" — match with optional whitespace.
-    await expect(main).toContainText(new RegExp(`Donation amount:\\s*\\$${usdWhole(amountCents)}`));
-    await expect(main).toContainText(new RegExp(`Total payment:\\s*\\$${usdWhole(amountCents)}`));
+    await expect(main).toContainText(new RegExp(`Donation amount:\\s*\\$${usdWhole(amountCents)}(?!\\d)`));
+    await expect(main).toContainText(new RegExp(`Total payment:\\s*\\$${usdWhole(amountCents)}(?!\\d)`));
     await expect(this.downloadReceiptButton).toBeVisible();
   }
 }
