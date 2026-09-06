@@ -29,7 +29,7 @@ export default defineConfig({
   projects: [
     {
       name: 'setup',
-      testMatch: '**/*.setup.ts',
+      testMatch: '**/cms.setup.ts',
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -62,10 +62,27 @@ export default defineConfig({
       dependencies: ['setup'],
     },
     {
+      // EMS API login → playwright/.auth/ems-token.json (see tests/setup/api.setup.ts).
+      name: 'api-setup',
+      testMatch: '**/api.setup.ts',
+    },
+    {
       // Pure HTTP tests against the EMS / Lite APIs (tests/api). No browser.
       // Absolute URLs come from env.api.*, so the global CMS baseURL is unused here.
       name: 'api',
       testDir: './tests/api',
+      dependencies: ['api-setup'],
+    },
+    {
+      // Donor journeys on the public Lite UI (tests/e2e), verified through the
+      // EMS API. Every journey moves the same event totals, so these must never
+      // interleave: fullyParallel is off here AND `npm run test:e2e` passes
+      // --workers=1 (Playwright has no per-project worker cap).
+      name: 'lite-e2e',
+      testDir: './tests/e2e',
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['api-setup'],
     },
   ],
 });
