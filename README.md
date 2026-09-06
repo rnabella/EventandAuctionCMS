@@ -48,6 +48,20 @@ npm run test:ui       # Playwright UI mode
 npm run report        # open the last HTML report
 ```
 
+### Fundraising (outcome) suite — donor journeys + API
+
+```bash
+npm run test:api          # EMS/Lite API tests (seconds; fully parallel; self-cleaning)
+npm run test:e2e          # donor journeys on the public Lite UI, one worker
+npm run test:fundraising  # both, api first (they share the same event totals)
+npm run test:all          # checklist suite + fundraising suite
+```
+
+These run against a **separate, clean E2E event** (`E2E_EVENT_ID` /
+`E2E_LITE_UI_BASE_URL` in `.env`) — never the checklist suite's
+`TEST_EVENT_ID`, whose accumulating rows would keep moving the totals these
+tests assert deltas on. Design: `docs/superpowers/specs/2026-09-06-fundraising-outcome-suite-design.md`.
+
 ## Structure
 
 ```
@@ -55,12 +69,19 @@ src/
   config/     - environment config loader (reads .env)
   pages/      - Page Object Model classes, one per CMS/Lite UI screen
   data/       - static test data / expected-state fixtures
+  api/        - HttpClient + EmsApi (back office) + LiteApi (public) clients, typed responses
+  pages/lite/ - Page Object Model classes for the public donor-facing Lite UI
+  utils/      - money formatting (cents -> "$10" / "$10.00")
 tests/
   setup/        - auth setup project; logs in once and saves storageState
   maintenance/   - cleanup tooling, run via `npm run cleanup` only (see above)
   cms/
     auth/       - login flow tests (run unauthenticated, no storageState)
     checklist/  - tests for authenticated CMS pages (use the saved storageState)
+  setup/api.setup.ts - EMS API login; writes playwright/.auth/ems-token.json
+  fixtures.ts        - `ems`, `lite`, `e2eEvent` fixtures for tests/api + tests/e2e
+  api/               - pure HTTP tests (project `api`)
+  e2e/               - Lite UI donor journeys verified via the EMS API (project `lite-e2e`)
 ```
 
 New authenticated CMS test suites go under `tests/cms/<section>/`, picked up
@@ -121,6 +142,18 @@ This checklist is the CMS's own definition of "what a fully configured
 campaign looks like" and is being used as the backlog for what gets automated
 next, section by section (Fundraising Website → Ticketing → Auction Items →
 Donations → Payment Collection → Event Displays → Notifications → Guests).
+
+- **Donations — donor journey (Lite UI + EMS API)** (`tests/e2e/donation.spec.ts`):
+  a new donor picks the $10 preset, registers with a Stripe test card
+  (processing fee off), places the donation, pays, sees the thank-you page;
+  the EMS API then shows totals +$10, a paid Stripe transaction for that
+  guest with the right purchase id, nothing outstanding, and a donation
+  report row for the donor.
+- **Donations — check-in API** (`tests/api/donations.api.spec.ts`): create →
+  totals +$10 → cancel → totals restored; cancel is idempotent; zero amount →
+  `invalid_amount`; unknown pledge / donation → 404 `notFound`; bad token → 401.
+- **Public Lite API** (`tests/api/lite-public.api.spec.ts`): event takes Stripe
+  card payments in USD; the donation item is active with the expected presets.
 
 ### Known limitations / follow-up work
 
@@ -343,3 +376,46 @@ just enough to avoid it.
   still in a "NOT READY" status — the friendly name apparently resolves
   asynchronously. A check written against the name silently never matches;
   checking for the number (always available immediately) is more reliable.
+
+#### Lite UI (public site) gotchas — from building the donation journey
+
+- **Preset amount tiles are `<label role="radio">` whose `aria-checked` never
+  changes** (selection is a `selected` CSS class). Playwright's `.check()`
+  fails with "did not change its state" — `.click()` and assert the class.
+- **Donors must sign in to donate, and the default is phone (SMS code).** The
+  "Sign in via email" link leads to email + password registration, which is
+  fully automatable — no code is ever sent. The form sits behind invisible
+  reCAPTCHA Enterprise; headless Chromium passes it.
+- **`@example.com` addresses are dropped at the edge (WAF) with a 502**, which
+  the UI shows as "Oops! there are difficulties logging you in". Use
+  `qa.e2e.donor+<seed>@givergy.com`. The site checks both email AND mobile for
+  existing registrations, so derive both from the same per-run seed.
+- **Registration and card pre-authorisation are one form.** Stripe Elements
+  render card number / expiry / CVC in three iframes with distinct `title`s
+  ("Secure card number input frame" etc.) — `frameLocator` by title, not by
+  the `__privateStripeFrame…` name, which is shared by unrelated frames.
+- **"Place Donation" counts toward `reports/totals` immediately, before any
+  payment.** Payment is a separate checkout step. Assert on totals after
+  placing, and on `guests/:id/payments/transactions` after paying.
+- **The checkout page never reaches `networkidle`** — it polls
+  `checkout/selected` forever. `goto(..., { waitUntil: 'domcontentloaded' })`
+  and wait for "Pay with Card".
+- **The processing-fee toggle is a hidden `<input name="applyPremiums">` inside
+  `<label class="switch">`** — the input is off-screen, so click the label.
+  Leaving it on adds 3.95% (e.g. $10.40), which breaks exact-amount asserts.
+- **`reports/payments` stayed `paymentsTaken: 0` after a real Stripe payment**,
+  so it is not used as an oracle; the per-guest `payments/transactions` list
+  and `reports/totals` are.
+- **`reports/donation` lists cancelled donations too** unless `status=ACTIVE`
+  is passed, and its `totalCount` is always 0 — count `entity` rows instead.
+- **Check-in `POST .../donations` returns HTTP 200 even when it rejects**
+  (`code: "invalid_amount"`); only pledge/guest lookups fail with 404. It also
+  accepted $5 on a pledge whose UI minimum is $10 — the minimum is enforced
+  client-side only (worth raising with the product team).
+- **"Download receipt" on the confirmation page is a `<a>` link, not a
+  button** — `getByRole('button', …)` finds nothing; use
+  `getByRole('link', …)`. It is never clicked by tests.
+- **The confirmation page's raw DOM text has no space after the colon**
+  ("Donation amount:$10") even though the accessibility tree shows one —
+  assert with a whitespace-tolerant, digit-anchored regex
+  (`Donation amount:\s*\$10(?!\d)`), not a literal string.
