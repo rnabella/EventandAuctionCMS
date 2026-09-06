@@ -84,10 +84,13 @@ export class TicketBookingPage extends LiteBasePage {
    *    `toBeChecked()` alone is not a reliable signal that the recompute has
    *    happened — the app updates the displayed fee amount (and therefore the
    *    Total) asynchronously. Each toggle's own amount cell — not just its
-   *    checkbox — is asserted before moving to the next one. (Turning the
-   *    booking fee on for the first time also defaults the processing fee on
-   *    as a side effect, observed live; asserting per-toggle amounts sidesteps
-   *    that too.)
+   *    checkbox — is asserted before moving to the next one, symmetrically in
+   *    both directions: off waits for the cell to settle to `$0.00`, on waits
+   *    for it to settle to any non-zero value (the exact amount is never
+   *    hardcoded, since which fee is which dollar figure could change).
+   *    (Turning the booking fee on for the first time also defaults the
+   *    processing fee on as a side effect, observed live; asserting
+   *    per-toggle amounts sidesteps that too.)
    */
   async setFees(on: boolean): Promise<void> {
     const rows: Record<string, string> = {
@@ -102,7 +105,9 @@ export class TicketBookingPage extends LiteBasePage {
         await this.reviewAndPayment.locator(`label.switch:has(input[name="${name}"])`).click();
       }
       await expect(input).toBeChecked({ checked: on });
-      if (!on) {
+      if (on) {
+        await expect(amount).not.toHaveText(`$${usd(0)}`, { timeout: 10_000 });
+      } else {
         await expect(amount).toHaveText(`$${usd(0)}`, { timeout: 10_000 });
       }
     }

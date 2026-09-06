@@ -18,6 +18,9 @@ export class TicketsPage extends LiteBasePage {
 
   /** Clicks "+" `quantity` times and confirms the selection summary lists the ticket. */
   async addTicket(title: string, quantity = 1): Promise<void> {
+    // Assumes the E2E fixture event lists exactly one sellable ticket, so the
+    // first "+" on the page is always the fixture ticket's; if a second
+    // on-sale ticket is ever added, scope this by row title instead.
     const plus = this.page.getByRole('button', { name: '+', exact: true }).first();
     for (let i = 0; i < quantity; i++) {
       await plus.click();
