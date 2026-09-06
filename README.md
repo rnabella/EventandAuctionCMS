@@ -227,6 +227,16 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
   Assignments" page automation — assigning a guest to a table via the guest
   creation form's own "Table" field is simpler and covers the checklist item
   just as well.
+- **Ticket stock release is not asserted.** The check-in purchase result's
+  `available`/`bought` fields are discarded and the iBid ticket is not
+  re-read after cancel; `api-setup`'s `ensureTicketSellable` silently
+  restocks the fixture below 100. A stock-leak regression would therefore be
+  repaired every run rather than reported. Follow-up: probe how
+  `available`/`bought` relate to `numberAvailable`, then pin it.
+- **Tickets slice scope (deliberate):** promo codes, custom ticket questions,
+  attendee assignment / ticket emails, Pay Later / Request Invoice, and
+  add-on donations are not covered; the journey takes the "Add later" path
+  and pays by saved card only.
 
 ## Maintenance cleanup tool
 
