@@ -87,8 +87,10 @@ export interface PaymentRecord {
 /** GET .../guests/:guestId/payments/checkout (BARE object) — what the guest still owes */
 export interface GuestCheckout {
   donations: Array<{ itemId: string; purchaseId: string; title: string; totalAmount: number }>;
+  /** Verified live 2026-09-07: an active, unpaid bid never appears here (silent-auction bids don't charge until the auction closes) — always empty in this suite. Verify bids via EmsApi.reports.bids / LiteApi.lots instead. */
   bids: unknown[];
   ticketPurchases: CheckoutTicketPurchase[];
+  buyNowPurchases: CheckoutBuyNowPurchase[];
   totalAmount: number;
   totalPremiumAmount: number;
   subTotal: number;
@@ -192,6 +194,165 @@ export interface CheckinTicketPurchaseResult {
 /** One line of GuestCheckout.ticketPurchases */
 export interface CheckoutTicketPurchase {
   itemId: string; // ticket id
+  purchaseId: string;
+  title: string;
+  itemNumber: string;
+  itemAmount: number;
+  itemCount: number;
+  totalAmount: number;
+  baseTotal: number;
+  subTotal: number;
+}
+
+/** GET/POST ems/v1/iBid/events/:eventId/lots/:lotId (enveloped) — the CMS's own lot record. */
+export interface IBidLot {
+  id: string;
+  eventId: string;
+  displayNumber: string;
+  title: string;
+  status: 'active' | string;
+  pdaDescription: string;
+  webDescription: string;
+  pictures: unknown[];
+  startTime: string;
+  endTime: string;
+  created?: string;
+  updated?: string;
+  sortNumber: number;
+  externalId: string;
+  donatedItemId: string | null;
+  linkedGuestId: string | null;
+  hidden: boolean;
+  shortId: string;
+  portal: boolean;
+  strapline: string;
+  termsDescription: string;
+  paymentDescription: string;
+  voucherInfo: string;
+  donatedBy: string;
+  categories: unknown[];
+  silent: boolean;
+  buyNowPrice: number; // cents
+  marginCap: number;
+  bidMode: 'silent' | 'hybrid' | 'buy_now' | 'sealed' | string;
+  numberAvailable: number;
+  startPrice: number; // cents
+  minStartPrice: number; // cents — the enforced minimum for a lot's first bid
+  increments: Array<{ threshold: number; amount: number }>; // cents; the minimum jump required over the current top bid
+  reserve: number;
+  estimate: number;
+  displayEstimate: boolean;
+  autoSell: boolean;
+  featured: boolean;
+  allowPayment: boolean;
+  featuredPictures: unknown[];
+  requirePayment: boolean;
+  sealedMultiBidding: boolean; // unrelated to sealed-bid visibility — do not use this to control sealed behaviour
+  enableGiftAid: boolean;
+  suppliedItemId: string | null;
+  supplierCost: number;
+  givergySupplyPrice: number;
+  clientCost: number;
+  deliveryAmount: number;
+  deliveryOptions: string[];
+  qrPicture: string | null;
+  video: string;
+  passwordProtect: boolean;
+  password: string;
+  taxRate: number;
+  fmvLocked: boolean;
+  revenueStreamType: string;
+  cost: number;
+  closed: boolean;
+}
+
+/** Payload for POST …/lots/:id — the server owns `created`/`updated`. */
+export type IBidLotUpdate = Omit<IBidLot, 'created' | 'updated'>;
+
+/** GET lite/v1/events/:eventId/lots (enveloped array) — the public lot listing. */
+export interface LiteLot {
+  id: string;
+  displayNumber: string;
+  title: string;
+  pictures: unknown[];
+  pictureInfos: unknown[];
+  categories: unknown[];
+  buyNowPrice: number;
+  bidMode: 'silent' | 'hybrid' | 'buy_now' | 'sealed' | string;
+  numberAvailable: number;
+  startPrice: number;
+  reserve: number;
+  /** Masked to 0 on a sealed lot regardless of real bids. */
+  topBidAmount: number;
+  /** "No Bids Yet" on a sealed lot even with real bids present. */
+  topBidAmountFormatted: string;
+  /** "Sealed Bid Item" on a sealed lot even with real bids present; "No Bids" when genuinely empty. */
+  topBidName: string;
+  topBidId: string;
+  anonymous: boolean;
+  /** Masked to 0 on a sealed lot regardless of real bid count. */
+  bidCount: number;
+  silent: boolean;
+  boughtTotal: number;
+  passwordProtect: boolean;
+  status: 'active' | string;
+  hidden: boolean;
+}
+
+/** POST checkin/v1/events/:eventId/guests/:guestId/bids (BARE payload, HTTP 200 even when rejected) */
+export interface CheckinBidResult {
+  id: string; // bid id — pass to cancelBid
+  lotId: string;
+  code: 'accepted' | 'below_minimum' | 'below_increase' | string;
+  message: string;
+  amount: number;
+  maxAmount: number;
+  topAmount: number; // masked to 0 on a sealed lot
+  topBid: string;
+  topBidder: string | null;
+}
+
+/** POST .../bids/cancel (enveloped; entity is null when the bid id was already gone — this endpoint is idempotent, unlike ticketPurchases/cancel). */
+export interface CancelledBid {
+  id: string;
+  guestId: string;
+  guestName: string;
+  anonymous: boolean;
+}
+
+/** POST checkin/v1/events/:eventId/guests/:guestId/buyNowPurchases (BARE OBJECT — not an array, unlike ticketPurchases) */
+export interface CheckinBuyNowResult {
+  id: string; // purchase id — pass to cancelBuyNowPurchase
+  buyNowId: string;
+  code: 'accepted' | 'invalid_bid_mode' | string;
+  message: string;
+  amount: number;
+  count: number;
+  available: number;
+  bought: number;
+}
+
+/** POST .../buyNowPurchases/cancel (enveloped; entity is null when the purchase id was already gone — idempotent). */
+export interface CancelledBuyNowPurchase {
+  id: string;
+  guestId: string;
+  guestName: string;
+  anonymous: boolean;
+}
+
+/** GET .../reports/bids (enveloped array) — one row per lot, regardless of bid mode. */
+export interface BidsReportRow {
+  id: string; // lot id
+  number: string; // the lot's display number
+  item: string; // lot title
+  bids: number; // bid count
+  totalValue: number; // cents
+  shortId: string;
+}
+
+/** One line of GuestCheckout.buyNowPurchases (bids never appear in checkout — see EmsApi.checkin.bid's docblock) */
+export interface CheckoutBuyNowPurchase {
+  itemId: string; // lot id
   purchaseId: string;
   title: string;
   itemNumber: string;

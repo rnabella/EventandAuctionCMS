@@ -2,11 +2,18 @@ import { APIRequestContext } from '@playwright/test';
 import { env } from '../config/env';
 import { HttpClient } from './http';
 import {
+  BidsReportRow,
+  CancelledBid,
+  CancelledBuyNowPurchase,
   CancelledDonation,
+  CheckinBidResult,
+  CheckinBuyNowResult,
   CheckinDonationResult,
   CheckinTicketPurchaseResult,
   DonationReportRow,
   GuestCheckout,
+  IBidLot,
+  IBidLotUpdate,
   IBidTicket,
   IBidTicketUpdate,
   PaymentRecord,
@@ -89,6 +96,8 @@ export class EmsApi {
       }
       return rows;
     },
+
+    bids: (eventId: string) => this.http.get<BidsReportRow[]>(`checkin/v1/events/${eventId}/reports/bids`),
   };
 
   readonly guests = {
@@ -111,6 +120,15 @@ export class EmsApi {
      */
     update: (eventId: string, ticketId: string, ticket: IBidTicketUpdate) =>
       this.http.post<unknown>(`v1/iBid/events/${eventId}/tickets/${ticketId}`, ticket),
+  };
+
+  /** The CMS's own lot records (the "iBid" API the CMS Next Auction Items pages save through). */
+  readonly lots = {
+    get: (eventId: string, lotId: string) => this.http.get<IBidLot>(`v1/iBid/events/${eventId}/lots/${lotId}`),
+
+    /** Full-record update — send the whole lot (as returned by `get`) with the changed fields, minus `created`/`updated`. */
+    update: (eventId: string, lotId: string, lot: IBidLotUpdate) =>
+      this.http.post<unknown>(`v1/iBid/events/${eventId}/lots/${lotId}`, lot),
   };
 
   /** Staff-side ("check-in") actions performed on a guest's behalf. */
@@ -145,5 +163,36 @@ export class EmsApi {
      */
     cancelTicketPurchase: (eventId: string, guestId: string, purchaseId: string) =>
       this.http.post<unknown>(`checkin/v1/events/${eventId}/guests/${guestId}/ticketPurchases/cancel`, { id: purchaseId }),
+
+    /**
+     * Places a bid on a lot on the guest's behalf. Bare payload, HTTP 200 even
+     * when the bid is rejected in-band (`code: "below_minimum" | "below_increase"`).
+     * Never appears in `guests.checkout()` — verify via `reports.bids` / `LiteApi.lots`.
+     */
+    bid: (eventId: string, guestId: string, body: { lotId: string; amount: number; anonymous?: boolean; autoSell?: boolean }) =>
+      this.http.post<CheckinBidResult>(`checkin/v1/events/${eventId}/guests/${guestId}/bids`, {
+        lotId: body.lotId,
+        amount: body.amount,
+        anonymous: body.anonymous ?? false,
+        showPopup: false,
+        liveTAndCAccepted: true,
+        autoSell: body.autoSell ?? false,
+      }),
+
+    /**
+     * Idempotent, unlike cancelTicketPurchase: cancelling an already-cancelled
+     * or unknown bid id still returns HTTP 200 "ok" with `entity: null`
+     * (verified live 2026-09-07) — never 404.
+     */
+    cancelBid: (eventId: string, guestId: string, bidId: string) =>
+      this.http.post<CancelledBid | null>(`checkin/v1/events/${eventId}/guests/${guestId}/bids/cancel`, { id: bidId }),
+
+    /** Reserves+charges are separate steps for tickets, but a buy-now purchase lands straight in `guests.checkout().buyNowPurchases`. Bare object, not an array. */
+    buyNowPurchase: (eventId: string, guestId: string, body: { buyNowId: string; count: number }) =>
+      this.http.post<CheckinBuyNowResult>(`checkin/v1/events/${eventId}/guests/${guestId}/buyNowPurchases`, body),
+
+    /** Idempotent, same as cancelBid — HTTP 200 even for an unknown purchase id. */
+    cancelBuyNowPurchase: (eventId: string, guestId: string, purchaseId: string) =>
+      this.http.post<CancelledBuyNowPurchase | null>(`checkin/v1/events/${eventId}/guests/${guestId}/buyNowPurchases/cancel`, { id: purchaseId }),
   };
 }
