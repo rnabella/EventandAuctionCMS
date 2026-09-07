@@ -11,6 +11,12 @@ export interface E2EEvent {
   apiGuestId: string;
   /** The pre-created "QA E2E Ticket" ($20) that api-setup keeps sellable. */
   ticketId: string;
+  /** The pre-created "QA E2E Silent Lot" (bidMode "hybrid", minStartPrice $25) that api-setup keeps sellable. */
+  lotId: string;
+  /** The pre-created "QA E2E Buy Now Lot" ($50) that api-setup keeps sellable. */
+  buyNowLotId: string;
+  /** The pre-created "QA E2E Sealed Lot" (bidMode "sealed", minStartPrice $25) that api-setup keeps sellable. */
+  sealedLotId: string;
 }
 
 type FundraisingFixtures = {
@@ -33,6 +39,9 @@ export const test = base.extend<FundraisingFixtures>({
       liteUiBaseUrl: env.e2e.liteUiBaseUrl,
       apiGuestId: env.e2e.apiGuestId,
       ticketId: env.e2e.ticketId,
+      lotId: env.e2e.lotId,
+      buyNowLotId: env.e2e.buyNowLotId,
+      sealedLotId: env.e2e.sealedLotId,
     });
   },
   lite: async ({ request }, use) => {

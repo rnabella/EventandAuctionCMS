@@ -34,6 +34,9 @@ export const env = {
     liteUiBaseUrl: required('E2E_LITE_UI_BASE_URL').replace(/\/+$/, ''),
     apiGuestId: required('E2E_API_GUEST_ID'),
     ticketId: required('E2E_TICKET_ID'),
+    lotId: required('E2E_LOT_ID'),
+    buyNowLotId: required('E2E_BUYNOW_LOT_ID'),
+    sealedLotId: required('E2E_SEALED_LOT_ID'),
   },
 
   api: {
