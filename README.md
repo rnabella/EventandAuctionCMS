@@ -180,6 +180,26 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
 - **Ticket fixture** — `E2E_TICKET_ID` names a pre-created ticket; `api-setup`
   keeps it sellable through the iBid API (stock ≥ 100, sale end far future,
   active, visible) so the journey never hits "Sold Out" or an expired sale.
+- **Silent auction — bid and outbid (Lite UI + EMS API)** (`tests/e2e/auction.spec.ts`):
+  a new donor bids the $25 minimum on the fixture lot, registers with a Stripe
+  test card, and the bid shows under My Activity's "Winning" tab; a second
+  journey has the shared API guest bid first, then a new UI donor outbid them
+  at the required $25 increment and become the new top bidder — both verified
+  via the EMS bids report and the public Lite lots listing.
+- **Buy It Now (Lite UI + EMS API)** (`tests/e2e/auction.spec.ts`): a new donor
+  buys the $50 fixture lot outright, pays with a test card through the
+  existing checkout flow, and the EMS API shows a paid purchase, an empty
+  basket, and the amount counted in `reports/totals.buyItNow` (unlike tickets,
+  buy-now purchases DO count toward fundraising totals).
+- **Auction API** (`tests/api/lots.api.spec.ts`): bid placement respects the
+  lot's minimum and increment rules (`below_minimum` / `below_increase` /
+  `accepted`), cancel is idempotent (HTTP 200 even for an unknown id, unlike
+  ticket cancellation), buy-now purchase/cancel, and sealed bidding masks the
+  top amount, bidder name, and count on the public site (verified against a
+  non-sealed lot with an identical bid, which shows the real values).
+- **Auction fixtures** — three permanent lots (`E2E_LOT_ID`, `E2E_BUYNOW_LOT_ID`,
+  `E2E_SEALED_LOT_ID`), one per bid mode; `api-setup` keeps them active,
+  visible, and far from their sale end via the iBid API.
 
 ### Known limitations / follow-up work
 
@@ -237,6 +257,13 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
   attendee assignment / ticket emails, Pay Later / Request Invoice, and
   add-on donations are not covered; the journey takes the "Add later" path
   and pays by saved card only.
+- **Live auction bidding is out of scope permanently, not deferred** — it
+  isn't a lot type this CMS supports at all (see the gotcha above), so there
+  is nothing to test regardless of tooling or manual steps.
+- **Closing the campaign, selling a lot, and the losing-bidder payment flow
+  are out of scope** — the "Close Campaign" wizard's later steps charge cards
+  and send emails for real, and both fundraising-suite events are reused on
+  every run, so there is no disposable copy to safely close.
 
 ## Maintenance cleanup tool
 
@@ -497,3 +524,32 @@ just enough to avoid it.
   `TicketBookingPage.setFees` waits for each amount cell to be non-empty
   before reading the toggle and asserts the cell's amount after toggling —
   read the amount cell, not the checkbox.
+- **A lot's detail-page URL uses its short display number, not its UUID** —
+  `?controller=lots&action=showLot&id=40706`, never the lot's `id` field from
+  the API. Only the browse page's own links carry the right number; page
+  objects open a lot by clicking its "Add … to Favourites" link rather than
+  building the URL from an id the suite already has.
+- **A lot's minimum-bid label text doesn't necessarily match its enforced
+  minimum** — our fixture lots show "Minimum Bid $10" / "Next Minimum Bid $10"
+  in the UI, but the API rejects anything below the lot's real
+  `minStartPrice` ($25) with `code: "below_minimum"`. Don't assert on the
+  label text as if it were the enforced value.
+- **A bid never reaches a payment step; a Buy It Now purchase does** — placing
+  a bid ends at the confirm-bid page (nothing is charged until the auction
+  closes, out of this suite's scope); confirming a Buy It Now purchase
+  navigates on to the ordinary `?controller=guest&action=checkout` page, the
+  same one tickets and donations use.
+- **`sealedMultiBidding` is not what makes a lot sealed** — that boolean field
+  is unrelated. The real control is the lot's `bidMode` (`silent` / `hybrid` /
+  `buy_now` / `sealed`), set by picking a "Type" in the CMS lot editor
+  (options: Silent Auction, Silent + Max Bidding, Buy It Now, Sealed Bidding).
+  There is no "Live" type — live-auction bidding isn't a feature this CMS
+  exposes for silent-auction-based events at all (verified by reading the
+  real save payload the CMS sends when changing this field: the enum has
+  exactly those four values).
+- **Bid/buy-now cancellation is idempotent; ticket cancellation is not** —
+  `bids/cancel` and `buyNowPurchases/cancel` both return HTTP 200 even for an
+  already-cancelled or unknown id, unlike `ticketPurchases/cancel`, which
+  404s on an unknown id (and separately, sc-98155, 500s on cancelling a real
+  one). Don't assume every `.../cancel` endpoint in this API behaves the same
+  way — check each one.
