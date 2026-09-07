@@ -19,6 +19,15 @@ setup('authenticate against the EMS API and prepare fixtures', async ({ request 
   await ensureTicketSellable(ems, env.e2e.eventId, env.e2e.ticketId);
   // Slice 3: the silent-auction/buy-now journeys need three lots that are in stock and on sale.
   await ensureLotSellable(ems, env.e2e.eventId, env.e2e.lotId);
-  await ensureLotSellable(ems, env.e2e.eventId, env.e2e.buyNowLotId, { bidMode: 'buy_now', buyNowPrice: 5000 });
+  // numberAvailable is the lot's declared stock, not "stock minus units the buy-now
+  // journey has ever actually paid for" — that latter, permanent count (reports.totals
+  // buyItNow.itemsSold) is never reversed by healing, so restocking to exactly 1 leaves
+  // nothing really purchasable on the public site after the very first completed sale
+  // ever recorded against this lot (verified live 2026-09-07: running the buy-now e2e
+  // test twice, each with its own api-setup run, showed "Sold Out" on the 2nd run even
+  // though numberAvailable had just been healed back to 1). Restock to a large buffer
+  // instead, exactly like ticketFixture.ts's RESTOCK_TO=1000 solves the identical
+  // problem for the ticket fixture.
+  await ensureLotSellable(ems, env.e2e.eventId, env.e2e.buyNowLotId, { bidMode: 'buy_now', buyNowPrice: 5000, numberAvailable: 1000 });
   await ensureLotSellable(ems, env.e2e.eventId, env.e2e.sealedLotId, { bidMode: 'sealed' });
 });

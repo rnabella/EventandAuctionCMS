@@ -22,4 +22,16 @@ export class LotDetailPage extends LiteBasePage {
   async expectMinimumBidLabelVisible(): Promise<void> {
     await expect(this.page.locator('main')).toContainText(/Minimum Bid \$\d/);
   }
+
+  private readonly purchaseButton = this.page.getByRole('button', { name: 'Purchase', exact: true });
+  private readonly increaseQuantityButton = this.page.getByRole('button', { name: /^Increased? the quantity/ });
+
+  /** Buy It Now lots default to quantity 1; only click "+" for a larger `quantity`. */
+  async startPurchase(quantity = 1): Promise<void> {
+    await this.purchaseButton.waitFor({ state: 'visible', timeout: 15_000 });
+    for (let i = 1; i < quantity; i++) {
+      await this.increaseQuantityButton.click();
+    }
+    await this.purchaseButton.click();
+  }
 }

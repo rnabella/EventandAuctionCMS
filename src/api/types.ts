@@ -266,8 +266,15 @@ export interface IBidLot {
   closed: boolean;
 }
 
-/** Payload for POST …/lots/:id — the server owns `created`/`updated`. */
-export type IBidLotUpdate = Omit<IBidLot, 'created' | 'updated'>;
+/**
+ * Payload for POST …/lots/:id — the server owns `created`/`updated`, and
+ * `startPrice` is immutable once the lot has any bids (a completed buy-now
+ * purchase counts as one): resending it, even unchanged, is rejected with
+ * `409 conflict "please do not change the starting price if there are any
+ * bids on this lot."` (verified live 2026-09-07 — same shape of rule as
+ * `IBidTicketUpdate`'s `ticketType` exclusion below).
+ */
+export type IBidLotUpdate = Omit<IBidLot, 'created' | 'updated' | 'startPrice'>;
 
 /** GET lite/v1/events/:eventId/lots (enveloped array) — the public lot listing. */
 export interface LiteLot {

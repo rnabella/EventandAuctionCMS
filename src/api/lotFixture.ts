@@ -27,9 +27,11 @@ function isSellable(lot: IBidLot, overrides: Partial<IBidLotUpdate>): boolean {
  * fields (e.g. `{ bidMode: 'buy_now', buyNowPrice: 5000 }`) in case a previous
  * run's exploration or a manual CMS edit drifted them. Mirrors
  * `ticketFixture.ts`'s `ensureTicketSellable` — same "strip created/updated,
- * send the rest back" write shape (lots have no ticket-style immutable field
- * like `ticketType`, so nothing else needs stripping), and the same one
- * sellability check reused before and after the write.
+ * send the rest back" write shape, and the same one sellability check reused
+ * before and after the write. Also strips `startPrice`, lots' own
+ * ticketType-shaped immutable field: the iBid API rejects it once the lot has
+ * any bids, which a completed buy-now purchase counts as (see
+ * `IBidLotUpdate`).
  */
 export async function ensureLotSellable(
   ems: EmsApi,
@@ -40,9 +42,10 @@ export async function ensureLotSellable(
   const lot = await ems.lots.get(eventId, lotId);
   if (isSellable(lot, overrides)) return;
 
-  const { created, updated, ...editable } = lot;
+  const { created, updated, startPrice, ...editable } = lot;
   void created;
   void updated;
+  void startPrice;
   await ems.lots.update(eventId, lotId, {
     ...editable,
     status: 'active',

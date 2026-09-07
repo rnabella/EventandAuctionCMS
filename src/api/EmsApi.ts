@@ -126,7 +126,7 @@ export class EmsApi {
   readonly lots = {
     get: (eventId: string, lotId: string) => this.http.get<IBidLot>(`v1/iBid/events/${eventId}/lots/${lotId}`),
 
-    /** Full-record update — send the whole lot (as returned by `get`) with the changed fields, minus `created`/`updated`. */
+    /** Full-record update — send the whole lot (as returned by `get`) with the changed fields, minus `created`/`updated`/`startPrice` (the last is rejected once the lot has any bids). */
     update: (eventId: string, lotId: string, lot: IBidLotUpdate) =>
       this.http.post<unknown>(`v1/iBid/events/${eventId}/lots/${lotId}`, lot),
   };
