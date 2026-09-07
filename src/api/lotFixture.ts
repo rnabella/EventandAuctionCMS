@@ -63,3 +63,31 @@ export async function ensureLotSellable(
     );
   }
 }
+
+/**
+ * Fails fast if any of the given fixture lots already carry a stray bid.
+ * Unlike donations/tickets, bid tests have no per-guest listing to scope
+ * their assertions to — they assert absolute lot-aggregate values (e.g.
+ * `{ bids: 1, totalValue: 2500 }`) via `reports.bids`. If a previous run left
+ * an unfinished bid on a fixture lot (e.g. an e2e journey whose
+ * `waitForResponse` threw after the bid POST already succeeded, skipping its
+ * own cleanup), every subsequent run's absolute assertions fail with a
+ * confusing mismatch and no indication why. Checking here, once per run,
+ * turns that into a clear, actionable failure instead. Only the silent and
+ * sealed lots use this report's notion of "bids" — the buy-now lot's
+ * purchases aren't bids, and its stock-management is a separate concern
+ * `ensureLotSellable` already handles.
+ */
+export async function assertNoStrayBids(ems: EmsApi, eventId: string, lotIds: readonly string[]): Promise<void> {
+  const rows = await ems.reports.bids(eventId);
+  for (const lotId of lotIds) {
+    const row = rows.find((r) => r.id === lotId);
+    if (row && row.bids > 0) {
+      throw new Error(
+        `Lot ${lotId} has ${row.bids} stray bid(s) left over (totalValue ${row.totalValue}), likely from a ` +
+          `previous e2e run that failed mid-journey before it could cancel its own bid. ` +
+          `Check it directly in the CMS: events/${eventId}/lots/edit/?id=${lotId}`,
+      );
+    }
+  }
+}

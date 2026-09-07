@@ -194,9 +194,12 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
 - **Auction API** (`tests/api/lots.api.spec.ts`): bid placement respects the
   lot's minimum and increment rules (`below_minimum` / `below_increase` /
   `accepted`), cancel is idempotent (HTTP 200 even for an unknown id, unlike
-  ticket cancellation), buy-now purchase/cancel, and sealed bidding masks the
-  top amount, bidder name, and count on the public site (verified against a
-  non-sealed lot with an identical bid, which shows the real values).
+  ticket cancellation), buy-now purchase/cancel, and sealed bidding masks only
+  the bidder's name on the public site (`topBidName` → "Sealed Bid Item") —
+  the amount/count fields are NOT zeroed, they're repurposed into a bid-count
+  echo once any bid exists (e.g. `bidCount: 1`, `topBidAmount: 1`,
+  `topBidAmountFormatted: "1 Bid Received"`); verified against a non-sealed lot
+  with an identical bid, which shows the real values in all four fields.
 - **Auction fixtures** — three permanent lots (`E2E_LOT_ID`, `E2E_BUYNOW_LOT_ID`,
   `E2E_SEALED_LOT_ID`), one per bid mode; `api-setup` keeps them active,
   visible, and far from their sale end via the iBid API.
@@ -547,6 +550,13 @@ just enough to avoid it.
   exposes for silent-auction-based events at all (verified by reading the
   real save payload the CMS sends when changing this field: the enum has
   exactly those four values).
+- **A sealed lot's public `bidCount`/`topBidAmount`/`topBidAmountFormatted`
+  are NOT masked to zero** — only `topBidName` is masked (→ "Sealed Bid
+  Item"). Once any bid exists, the other three fields instead echo the real
+  bid count (e.g. `bidCount: 1`, `topBidAmount: 1`,
+  `topBidAmountFormatted: "1 Bid Received"`). Don't assume "sealed" means
+  "zeroed out" when reading the public Lite `lots()` response — check
+  `topBidName` for the actual masking.
 - **Bid/buy-now cancellation is idempotent; ticket cancellation is not** —
   `bids/cancel` and `buyNowPurchases/cancel` both return HTTP 200 even for an
   already-cancelled or unknown id, unlike `ticketPurchases/cancel`, which
