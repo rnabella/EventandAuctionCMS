@@ -282,15 +282,16 @@ export interface LiteLot {
   numberAvailable: number;
   startPrice: number;
   reserve: number;
-  /** Masked to 0 on a sealed lot regardless of real bids. */
+  /** On a sealed lot with any bid present, echoes bidCount (e.g. 1) instead of the real amount — not masked to 0. */
   topBidAmount: number;
-  /** "No Bids Yet" on a sealed lot even with real bids present. */
+  /** On a sealed lot with any bid present, e.g. "1 Bid Received" — not "No Bids Yet". */
   topBidAmountFormatted: string;
   /** "Sealed Bid Item" on a sealed lot even with real bids present; "No Bids" when genuinely empty. */
   topBidName: string;
+  /** The top bidder's *guest* id, not a bid id — do not pass this to `EmsApi.checkin.cancelBid`'s bidId argument (verified live 2026-09-07, Task 6). */
   topBidId: string;
   anonymous: boolean;
-  /** Masked to 0 on a sealed lot regardless of real bid count. */
+  /** NOT masked on a sealed lot — shows the real count; only topBidName/topBidAmount(Formatted) mask. */
   bidCount: number;
   silent: boolean;
   boughtTotal: number;
