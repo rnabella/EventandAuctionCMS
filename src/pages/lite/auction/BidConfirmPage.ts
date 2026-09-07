@@ -21,9 +21,12 @@ export class BidConfirmPage extends LiteBasePage {
 
   /**
    * Clicks "Place Bid" and waits for the site's own bid POST to report success.
-   * Never reaches a payment step.
+   * Never reaches a payment step. Returns the placed bid's own id (`entity.id`) —
+   * needed for cleanup, since `LiteLot.topBidId` (from `LiteApi.lots()`) is
+   * actually the top *bidder's guest id*, not the bid's own id (verified live
+   * 2026-09-07: cancelling with `topBidId` as the bid id silently no-ops).
    */
-  async confirmBid(): Promise<void> {
+  async confirmBid(): Promise<string> {
     const [response] = await Promise.all([
       this.page.waitForResponse(
         (r) => r.request().method() === 'POST' && /\/lite\/v1\/events\/[^/]+\/guests\/[^/]+\/bids(\?|$)/.test(r.url()),
@@ -31,9 +34,14 @@ export class BidConfirmPage extends LiteBasePage {
       ),
       this.placeBidButton.click(),
     ]);
-    const body = (await response.json()) as { code: string; message: string; entity: { code: string; message: string } | null };
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      entity: { code: string; message: string; id: string } | null;
+    };
     if (body.code !== 'ok' || body.entity?.code !== 'accepted') {
       throw new Error(`Placing the bid failed: ${body.code}/${body.entity?.code} — ${body.entity?.message ?? body.message}`);
     }
+    return body.entity.id;
   }
 }
