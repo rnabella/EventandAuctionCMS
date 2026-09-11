@@ -46,6 +46,12 @@ export class HttpClient {
     return this.parse<T>('POST', path, response);
   }
 
+  /** Partial update. Only the GLI raffle iBid endpoint uses this verb (see `EmsApi.gliRaffles.update`) — tickets/lots use `post`. */
+  async patch<T>(path: string, data?: unknown): Promise<T> {
+    const response = await this.request.patch(this.url(path), { headers: this.headers(), data });
+    return this.parse<T>('PATCH', path, response);
+  }
+
   private url(path: string): string {
     return `${this.baseUrl}/${path.replace(/^\/+/, '')}`;
   }

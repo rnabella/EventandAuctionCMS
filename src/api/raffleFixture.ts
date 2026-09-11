@@ -24,16 +24,25 @@ function isSellable(r: IBidGliRaffle): boolean {
  * Only the top-level individual-entry stock is healed; the "3 for $25" bundle
  * is out of scope (this suite never purchases it — see the plan's Global
  * Constraints).
+ *
+ * Unlike ensureTicketSellable/ensureLotSellable, this does NOT echo the full
+ * record back minus a couple of excluded fields. Verified live 2026-09-11
+ * against the real fixture raffle (which already has real purchases against
+ * it): the gli-raffles iBid endpoint only accepts PATCH (POST 405s with
+ * `Allow: GET, HEAD, OPTIONS, PATCH`), and PATCH here is a genuine partial
+ * update — sending the ticket/lot-style "full record minus created/updated"
+ * payload 500s (`{"code":"Internal Server Error","message":"Unknown
+ * problem"}`), while sending only the fields actually changing succeeds. So
+ * no field needs excluding the way ticketFixture excludes `ticketType` or
+ * lotFixture excludes `startPrice` — the fix instead is to never send more
+ * than the four fields below.
  */
 export async function ensureRaffleSellable(ems: EmsApi, eventId: string, raffleId: string): Promise<IBidGliRaffle> {
   const raffle = await ems.gliRaffles.get(eventId, raffleId);
   if (isSellable(raffle)) {
     return raffle;
   }
-  const { created, updated, ...editable } = raffle;
-  void created; void updated;
   await ems.gliRaffles.update(eventId, raffleId, {
-    ...editable,
     status: 'active',
     hidden: false,
     numberAvailable: Math.max(raffle.numberAvailable, RESTOCK_TO),
@@ -44,7 +53,7 @@ export async function ensureRaffleSellable(ems: EmsApi, eventId: string, raffleI
     throw new Error(
       `Fixture raffle ${raffleId} is still not sellable after an iBid update ` +
         `(status=${after.status} hidden=${after.hidden} numberAvailable=${after.numberAvailable} endTime=${after.endTime}). ` +
-        `Fix it in the CMS: events/${eventId}/prizeDraws/edit/?id=${raffleId} (or wherever GLI raffles are edited — confirm the real CMS path during implementation).`,
+        `Fix it in the CMS: events/${eventId}/gliRaffles/edit/?id=${raffleId} (the "Raffles" section).`,
     );
   }
   return after;

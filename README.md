@@ -206,17 +206,21 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
 - **GLI Raffle — purchase journey (Lite UI + EMS API)** (`tests/e2e/raffle.spec.ts`):
   a new donor selects the $10 "QA E2E Raffle" fixture entry, registers with a
   Stripe test card, purchases one entry, pays, and sees the thank-you page;
-  the EMS API then shows a paid raffle purchase, an empty basket, the amount
-  counted in `reports/totals.prizePot` (raffle proceeds), and a raffle report
-  row for the purchase.
-- **GLI Raffle — API** (`tests/api/gliRaffles.api.spec.ts`): create a purchase
-  via the Lite public API, verify the fixture's `bought` count increments and
-  `totalRaised`/`prizePot` totals update (this slice is read-only for check-in;
-  see gotchas below), and verify access-control: an arbitrary `deviceId` on a
-  `POST checkin/v1/…/gliRafflePurchases` request is rejected with HTTP 403
-  `{"code":"forbidden"}`.
+  the EMS API then shows a paid raffle purchase, an empty basket, and the
+  amount/count reflected as deltas on `reports.totals.raffles.totalRaised`,
+  `reports.totals.raffles.raffleEntries`, top-level `reports.totals.totalRaised`,
+  and `reports.gliRaffleItems[].bought`/`totalRaised` for the fixture raffle.
+- **GLI Raffle — API** (`tests/api/raffle.api.spec.ts`, 5 tests): the fixture
+  raffle is active, $10/entry and in stock via the iBid API; it's listed
+  correctly on the Lite public API with its bundle; `api-setup`'s sellability
+  guarantee (stock ≥ 100, sale end > 30 days out) holds; and two access-control/
+  validation cases this slice cannot exercise a real purchase for — creating a
+  purchase with an unregistered device id is rejected with a real HTTP 403
+  `{"code":"forbidden"}`, and cancelling an unknown purchase id returns a real
+  HTTP 404 `{"code":"notFound"}` — see gotchas below for why the API suite can't
+  create a real purchase itself (only the Lite UI e2e journey can).
 - **GLI Raffle fixture** — `E2E_RAFFLE_ID` names a pre-created entry ($10/entry,
-  "QA E2E Raffle"); `api-setup` keeps it sellable through the Lite public API
+  "QA E2E Raffle"); `api-setup` keeps it sellable through the EMS iBid API
   via `ensureRaffleSellable` (mirrors `ensureTicketSellable`), never cancels
   purchases (follows the donations/tickets precedent, accumulating real fixture
   data), and the bundle purchase path (3 for $25) is deliberately out of scope.
@@ -517,7 +521,10 @@ just enough to avoid it.
 - **The confirmation page's raw DOM text has no space after the colon**
   ("Donation amount:$10") even though the accessibility tree shows one —
   assert with a whitespace-tolerant, digit-anchored regex
-  (`Donation amount:\s*\$10(?!\d)`), not a literal string.
+  (`` `(?:Donation|Purchase) amount:\s*\$${usdWhole(amountCents)}(?!\d)` ``),
+  not a literal string. The `(?:Donation|Purchase)` alternation was added for
+  the raffle confirmation page, whose copy reads "Purchase amount:" instead —
+  see the GLI Raffle gotchas below.
 - **A ticket created through the CMS is "Sold Out" until you set its Limit** —
   `numberAvailable` defaults to 0 and the sale window to 24 hours. The
   fixture is repaired automatically by `api-setup` (`src/api/ticketFixture.ts`)

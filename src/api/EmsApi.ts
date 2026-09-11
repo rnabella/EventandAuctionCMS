@@ -145,11 +145,23 @@ export class EmsApi {
       this.http.post<unknown>(`v1/iBid/events/${eventId}/lots/${lotId}`, lot),
   };
 
-  /** The CMS's own GLI raffle records (the "iBid" API the CMS Next Prize Draws pages save through). */
+  /**
+   * The CMS's own GLI raffle records (the "iBid" API the CMS's "Raffles" admin pages,
+   * `events/:eventId/gliRaffles/`, save through — NOT the separate, not-yet-built "Prize Draw"
+   * feature, which is a different `controller=raffles` resource; see the README's GLI Raffle gotchas).
+   */
   readonly gliRaffles = {
     get: (eventId: string, raffleId: string) => this.http.get<IBidGliRaffle>(`v1/iBid/events/${eventId}/gli-raffles/${raffleId}`),
-    update: (eventId: string, raffleId: string, raffle: IBidGliRaffleUpdate) =>
-      this.http.post<unknown>(`v1/iBid/events/${eventId}/gli-raffles/${raffleId}`, raffle),
+
+    /**
+     * Partial update — unlike `tickets.update`/`lots.update` (full-record POST), this endpoint
+     * only accepts PATCH (verified live 2026-09-11: POST 405s, `Allow: GET, HEAD, OPTIONS, PATCH`)
+     * and only wants the fields actually changing — echoing back the full record (even minus
+     * `created`/`updated`, the tickets/lots pattern) 500s ("Unknown problem"). Send just the
+     * changed fields, e.g. `{ numberAvailable, endTime }` (see `raffleFixture.ts`).
+     */
+    update: (eventId: string, raffleId: string, raffle: Partial<IBidGliRaffleUpdate>) =>
+      this.http.patch<unknown>(`v1/iBid/events/${eventId}/gli-raffles/${raffleId}`, raffle),
   };
 
   /** Staff-side ("check-in") actions performed on a guest's behalf. */
@@ -217,10 +229,10 @@ export class EmsApi {
       this.http.post<CancelledBuyNowPurchase | null>(`checkin/v1/events/${eventId}/guests/${guestId}/buyNowPurchases/cancel`, { id: purchaseId }),
 
     /**
-     * Idempotent-ish: cancelling an unknown purchase id 404s (verified live 2026-09-11) — unlike
-     * cancelBid/cancelBuyNowPurchase, which return 200/null for unknown ids. Reverses
-     * reports.gliRaffleItems' totalRaised/prizePot and reports.totals.raffles, but NOT
-     * reports.gliRaffleItems' bought (see that type's docblock).
+     * Idempotent-ish: cancelling an unknown purchase id 404s with `code: "notFound"` (verified
+     * live 2026-09-11) — unlike cancelBid/cancelBuyNowPurchase, which return 200/null for unknown
+     * ids. Reverses reports.gliRaffleItems' totalRaised/prizePot and reports.totals.raffles, but
+     * NOT reports.gliRaffleItems' bought (see that type's docblock).
      */
     cancelGliRafflePurchase: (eventId: string, guestId: string, purchaseId: string) =>
       this.http.post<CancelledGliRafflePurchase>(`checkin/v1/events/${eventId}/guests/${guestId}/gliRafflePurchases/cancel`, {

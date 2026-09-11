@@ -372,7 +372,7 @@ export interface CheckoutBuyNowPurchase {
   subTotal: number;
 }
 
-/** GET/POST ems/v1/iBid/events/:eventId/gli-raffles/:raffleId (enveloped) — the CMS's own raffle record. */
+/** GET/PATCH ems/v1/iBid/events/:eventId/gli-raffles/:raffleId (enveloped) — the CMS's own raffle record. PATCH is a partial update — see `EmsApi.gliRaffles.update`'s docblock. */
 export interface IBidGliRaffle {
   id: string;
   eventId: string;

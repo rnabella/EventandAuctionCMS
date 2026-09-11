@@ -44,11 +44,15 @@ test.describe('EMS check-in API > GLI raffle purchases — access control and va
         count: 1,
         deviceId: '00000000-0000-0000-0000-000000000001',
       }),
-    ).rejects.toMatchObject({ code: 'forbidden' });
+    ).rejects.toMatchObject({ status: 403, code: 'forbidden' });
   });
 
   test('cancelling an unknown purchase id 404s', async ({ ems, e2eEvent }) => {
     const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
-    await expect(ems.checkin.cancelGliRafflePurchase(e2eEvent.id, e2eEvent.apiGuestId, ZERO_UUID)).rejects.toThrow();
+    // Verified live 2026-09-11: a real HTTP 404 with `code: "notFound"`, not merely "some rejection".
+    await expect(ems.checkin.cancelGliRafflePurchase(e2eEvent.id, e2eEvent.apiGuestId, ZERO_UUID)).rejects.toMatchObject({
+      status: 404,
+      code: 'notFound',
+    });
   });
 });
