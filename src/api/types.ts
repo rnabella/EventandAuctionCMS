@@ -401,7 +401,13 @@ export interface IBidGliRaffle {
   [key: string]: unknown; // the full record has ~50 more admin-only fields never touched by this suite
 }
 
-export type IBidGliRaffleUpdate = Omit<IBidGliRaffle, 'created' | 'updated'>;
+export type IBidGliRaffleUpdate = Pick<
+  IBidGliRaffle,
+  | 'id' | 'eventId' | 'displayNumber' | 'title' | 'status' | 'hidden' | 'shortId'
+  | 'price' | 'numberAvailable' | 'startTime' | 'endTime' | 'raffleMode' | 'minimumAge'
+  | 'countryRegion' | 'jurisdiction' | 'licenceNumber' | 'licensee' | 'splitPercentage'
+  | 'currencyCode' | 'started' | 'suspended' | 'bundles'
+>;
 
 export interface IBidGliRaffleBundle {
   id: string;

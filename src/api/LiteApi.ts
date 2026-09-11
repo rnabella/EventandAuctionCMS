@@ -38,7 +38,7 @@ export class LiteApi {
     return this.http.get<LiteGliRaffle[]>(`v1/events/${eventId}/gli-raffles`);
   }
 
-  /** One raffle's detail (same shape each array element in gliRaffles() has, per the live API — confirm during implementation). */
+  /** One raffle's detail (same shape each array element in gliRaffles() has, per the live API — verified live 2026-09-11). */
   gliRaffle(eventId: string, raffleId: string) {
     return this.http.get<LiteGliRaffle>(`v1/events/${eventId}/gli-raffles/${raffleId}`);
   }
