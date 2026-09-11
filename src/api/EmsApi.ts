@@ -6,12 +6,16 @@ import {
   CancelledBid,
   CancelledBuyNowPurchase,
   CancelledDonation,
+  CancelledGliRafflePurchase,
   CheckinBidResult,
   CheckinBuyNowResult,
   CheckinDonationResult,
   CheckinTicketPurchaseResult,
   DonationReportRow,
+  GliRaffleItemsReportRow,
   GuestCheckout,
+  IBidGliRaffle,
+  IBidGliRaffleUpdate,
   IBidLot,
   IBidLotUpdate,
   IBidTicket,
@@ -98,6 +102,9 @@ export class EmsApi {
     },
 
     bids: (eventId: string) => this.http.get<BidsReportRow[]>(`checkin/v1/events/${eventId}/reports/bids`),
+
+    /** Per-raffle sold/raised snapshot. NOT under checkin's reports/ path — a real API quirk, verified live 2026-09-11. */
+    gliRaffleItems: (eventId: string) => this.http.get<GliRaffleItemsReportRow[]>(`checkin/v1/events/${eventId}/items/gliRaffles`),
   };
 
   readonly guests = {
@@ -129,6 +136,13 @@ export class EmsApi {
     /** Full-record update — send the whole lot (as returned by `get`) with the changed fields, minus `created`/`updated`/`startPrice` (the last is rejected once the lot has any bids). */
     update: (eventId: string, lotId: string, lot: IBidLotUpdate) =>
       this.http.post<unknown>(`v1/iBid/events/${eventId}/lots/${lotId}`, lot),
+  };
+
+  /** The CMS's own GLI raffle records (the "iBid" API the CMS Next Prize Draws pages save through). */
+  readonly gliRaffles = {
+    get: (eventId: string, raffleId: string) => this.http.get<IBidGliRaffle>(`v1/iBid/events/${eventId}/gli-raffles/${raffleId}`),
+    update: (eventId: string, raffleId: string, raffle: IBidGliRaffleUpdate) =>
+      this.http.post<unknown>(`v1/iBid/events/${eventId}/gli-raffles/${raffleId}`, raffle),
   };
 
   /** Staff-side ("check-in") actions performed on a guest's behalf. */
@@ -194,5 +208,16 @@ export class EmsApi {
     /** Idempotent, same as cancelBid — HTTP 200 even for an unknown purchase id. */
     cancelBuyNowPurchase: (eventId: string, guestId: string, purchaseId: string) =>
       this.http.post<CancelledBuyNowPurchase | null>(`checkin/v1/events/${eventId}/guests/${guestId}/buyNowPurchases/cancel`, { id: purchaseId }),
+
+    /**
+     * Idempotent-ish: cancelling an unknown purchase id 404s (verified live 2026-09-11) — unlike
+     * cancelBid/cancelBuyNowPurchase, which return 200/null for unknown ids. Reverses
+     * reports.gliRaffleItems' totalRaised/prizePot and reports.totals.raffles, but NOT
+     * reports.gliRaffleItems' bought (see that type's docblock).
+     */
+    cancelGliRafflePurchase: (eventId: string, guestId: string, purchaseId: string) =>
+      this.http.post<CancelledGliRafflePurchase>(`checkin/v1/events/${eventId}/guests/${guestId}/gliRafflePurchases/cancel`, {
+        id: purchaseId,
+      }),
   };
 }

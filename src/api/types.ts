@@ -91,6 +91,7 @@ export interface GuestCheckout {
   bids: unknown[];
   ticketPurchases: CheckoutTicketPurchase[];
   buyNowPurchases: CheckoutBuyNowPurchase[];
+  gliRaffles: CheckoutGliRafflePurchase[];
   totalAmount: number;
   totalPremiumAmount: number;
   subTotal: number;
@@ -369,4 +370,103 @@ export interface CheckoutBuyNowPurchase {
   totalAmount: number;
   baseTotal: number;
   subTotal: number;
+}
+
+/** GET/POST ems/v1/iBid/events/:eventId/gli-raffles/:raffleId (enveloped) — the CMS's own raffle record. */
+export interface IBidGliRaffle {
+  id: string;
+  eventId: string;
+  displayNumber: string;
+  title: string;
+  status: 'active' | string;
+  hidden: boolean;
+  shortId: string;
+  price: number; // cents, the per-individual-entry price
+  numberAvailable: number;
+  startTime: string;
+  endTime: string;
+  created?: string;
+  updated?: string;
+  raffleMode: 'regular_prize_draw' | string;
+  minimumAge: number;
+  countryRegion: string;
+  jurisdiction?: string;
+  licenceNumber: string;
+  licensee: string;
+  splitPercentage: number;
+  currencyCode: string;
+  started: boolean;
+  suspended: boolean;
+  bundles?: IBidGliRaffleBundle[];
+  [key: string]: unknown; // the full record has ~50 more admin-only fields never touched by this suite
+}
+
+export type IBidGliRaffleUpdate = Omit<IBidGliRaffle, 'created' | 'updated'>;
+
+export interface IBidGliRaffleBundle {
+  id: string;
+  title: string; // e.g. "3 for $25"
+  count: number; // entries per bundle
+  price: number; // cents
+  numberAvailable: number;
+  status: 'active' | string;
+}
+
+/** GET lite/v1/events/:eventId/gli-raffles(/:id) (enveloped) — the public site's raffle detail. */
+export interface LiteGliRaffle {
+  cachedGliRaffle: {
+    id: string;
+    displayNumber: string;
+    title: string;
+    status: 'active' | string;
+    hidden: boolean;
+    price: number;
+    minimumAge: number;
+    startTime: string;
+    endTime: string;
+  };
+  gliBundleList: Array<{ id: string; title: string; count: number; price: number; numberLeft: number; numberAvailable: number }>;
+  totalRaisedAmount: number;
+  prizeAmount: number;
+  numberLeft: number; // remaining individual-entry stock
+  bundleNumberLeft: number;
+  totalNumberLeft: number; // numberLeft + bundleNumberLeft
+}
+
+/** GET checkin/v1/events/:eventId/items/gliRaffles (BARE array) — the per-raffle sold/raised oracle, same role as BidsReportRow for lots. */
+export interface GliRaffleItemsReportRow {
+  id: string;
+  number: string;
+  title: string;
+  price: number;
+  available: number;
+  bought: number; // NEVER reverses on cancel (same quirk as tickets' itemsSold) — delta-assert, don't compare to an absolute value across a cancel
+  bundles: Array<{ id: string; title: string; price: number; available: number; bought: number; count: number }>;
+  minAge: number;
+  jurisdiction: string;
+  prizePot: number; // DOES reverse on cancel
+  totalRaised: number; // DOES reverse on cancel
+}
+
+/** One line of GuestCheckout.gliRaffles */
+export interface CheckoutGliRafflePurchase {
+  itemId: string; // raffle id
+  purchaseId: string;
+  title: string;
+  itemNumber: string;
+  itemAmount: number;
+  itemCount: number;
+  totalAmount: number;
+  baseTotal: number;
+  subTotal: number;
+}
+
+/** POST .../gliRafflePurchases/cancel response */
+export interface CancelledGliRafflePurchase {
+  id: string;
+  gliRaffleId: string;
+  code: 'cancelled' | string;
+  bundleId: string | null;
+  amount: number;
+  count: number;
 }

@@ -37,6 +37,7 @@ export const env = {
     lotId: required('E2E_LOT_ID'),
     buyNowLotId: required('E2E_BUYNOW_LOT_ID'),
     sealedLotId: required('E2E_SEALED_LOT_ID'),
+    raffleId: required('E2E_RAFFLE_ID'),
   },
 
   api: {

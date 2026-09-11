@@ -1,7 +1,7 @@
 import { APIRequestContext } from '@playwright/test';
 import { env } from '../config/env';
 import { HttpClient } from './http';
-import { LiteEvent, LiteLot, LiteTicket, PledgeItem } from './types';
+import { LiteEvent, LiteGliRaffle, LiteLot, LiteTicket, PledgeItem } from './types';
 
 /**
  * The public Lite back end the donor-facing site itself calls. Reads need no
@@ -31,5 +31,15 @@ export class LiteApi {
   /** All lots currently shown on the public site (any bid mode). */
   lots(eventId: string) {
     return this.http.get<LiteLot[]>(`v1/events/${eventId}/lots`);
+  }
+
+  /** Every GLI raffle currently shown on the public site. */
+  gliRaffles(eventId: string) {
+    return this.http.get<LiteGliRaffle[]>(`v1/events/${eventId}/gli-raffles`);
+  }
+
+  /** One raffle's detail (same shape each array element in gliRaffles() has, per the live API — confirm during implementation). */
+  gliRaffle(eventId: string, raffleId: string) {
+    return this.http.get<LiteGliRaffle>(`v1/events/${eventId}/gli-raffles/${raffleId}`);
   }
 }

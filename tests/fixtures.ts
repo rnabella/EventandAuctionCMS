@@ -17,6 +17,8 @@ export interface E2EEvent {
   buyNowLotId: string;
   /** The pre-created "QA E2E Sealed Lot" (bidMode "sealed", minStartPrice $25) that api-setup keeps sellable. */
   sealedLotId: string;
+  /** The pre-created "QA E2E Raffle" ($10/entry, "3 for $25" bundle) that api-setup keeps sellable. */
+  raffleId: string;
 }
 
 type FundraisingFixtures = {
@@ -42,6 +44,7 @@ export const test = base.extend<FundraisingFixtures>({
       lotId: env.e2e.lotId,
       buyNowLotId: env.e2e.buyNowLotId,
       sealedLotId: env.e2e.sealedLotId,
+      raffleId: env.e2e.raffleId,
     });
   },
   lite: async ({ request }, use) => {
