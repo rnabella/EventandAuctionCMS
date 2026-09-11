@@ -203,6 +203,23 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
 - **Auction fixtures** — three permanent lots (`E2E_LOT_ID`, `E2E_BUYNOW_LOT_ID`,
   `E2E_SEALED_LOT_ID`), one per bid mode; `api-setup` keeps them active,
   visible, and far from their sale end via the iBid API.
+- **GLI Raffle — purchase journey (Lite UI + EMS API)** (`tests/e2e/raffle.spec.ts`):
+  a new donor selects the $10 "QA E2E Raffle" fixture entry, registers with a
+  Stripe test card, purchases one entry, pays, and sees the thank-you page;
+  the EMS API then shows a paid raffle purchase, an empty basket, the amount
+  counted in `reports/totals.prizePot` (raffle proceeds), and a raffle report
+  row for the purchase.
+- **GLI Raffle — API** (`tests/api/gliRaffles.api.spec.ts`): create a purchase
+  via the Lite public API, verify the fixture's `bought` count increments and
+  `totalRaised`/`prizePot` totals update (this slice is read-only for check-in;
+  see gotchas below), and verify access-control: an arbitrary `deviceId` on a
+  `POST checkin/v1/…/gliRafflePurchases` request is rejected with HTTP 403
+  `{"code":"forbidden"}`.
+- **GLI Raffle fixture** — `E2E_RAFFLE_ID` names a pre-created entry ($10/entry,
+  "QA E2E Raffle"); `api-setup` keeps it sellable through the Lite public API
+  via `ensureRaffleSellable` (mirrors `ensureTicketSellable`), never cancels
+  purchases (follows the donations/tickets precedent, accumulating real fixture
+  data), and the bundle purchase path (3 for $25) is deliberately out of scope.
 
 ### Known limitations / follow-up work
 
@@ -563,3 +580,42 @@ just enough to avoid it.
   404s on an unknown id (and separately, sc-98155, 500s on cancelling a real
   one). Don't assume every `.../cancel` endpoint in this API behaves the same
   way — check each one.
+
+#### GLI Raffle (Lite UI + API) gotchas
+
+- **Three similarly-named features are easy to conflate:** Silent Auction
+  (`controller=lots`, `items/lots`), Raffle (`controller=gliRaffles`,
+  GLI-licensed with `bundles`/`raffleMode`/`licenceNumber`), and Prize Draw
+  (`controller=raffles`, a separate not-yet-built feature with its own
+  `prizeDrawPurchases` guest endpoint). Searching for "raffle" in the codebase
+  or API docs can return hits from all three — always verify the endpoint path
+  and the fixture's `controller` value before assuming you have the right
+  resource.
+- **GLI raffle purchases cannot be created via the check-in API the way
+  tickets/bids/buy-now can.** `POST checkin/v1/events/:eventId/guests/:guestId/gliRafflePurchases`
+  requires a `deviceId` for a device registered to the event. Any id this suite
+  has access to (e.g. a generated UUID, or a value from the public API) is
+  rejected with a real HTTP 403 and `{"code":"forbidden","message":"Forbidden access"}`.
+  There is no discoverable API to obtain a valid device id. Consequently only
+  the Lite UI (the e2e spec) can create a real raffle purchase; the API suite
+  covers fixture sellability, the Lite public API's shape, and this access-control
+  behavior instead.
+- **`items/gliRaffles[].bought` never reverses on cancel; `totalRaised` and
+  `prizePot` do.** This is the same permanent-counter / reversible-total split
+  seen with tickets' `itemsSold`, but it appears on the SAME endpoint here,
+  which is easy to assert the wrong field against after a cancel. Always
+  double-check which field you're asserting against when verifying cancel
+  side-effects.
+- **This slice deliberately never cancels its e2e purchase.** It follows the
+  donations/tickets precedent (accumulate real fixture data + delta-assert on
+  `reports.totals`/`reports.gliRaffleItems`), not the silent-auction precedent
+  (single shared fixture that must be reset between runs). A future contributor
+  should not "fix" this by adding a cancel that isn't needed — it would break
+  the fixture for the next run and leave the event in a dirty state.
+- **`PaymentConfirmationPage.expectSuccess()` hardcoded "Donation amount:" in
+  its verification regex**, which didn't match the raffle confirmation page's
+  actual copy ("Purchase amount:"). Fixed by generalizing the regex to
+  `(?:Donation|Purchase) amount:` — backward compatible, existing donation
+  and ticket specs unaffected. Similar label-text assumptions in other
+  confirmation or report pages should be rechecked when adding new payment
+  types.
