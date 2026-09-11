@@ -14,4 +14,12 @@ test.describe('EMS iBid API > fixture raffle', () => {
     expect(raffle.numberLeft).toBeGreaterThanOrEqual(1);
     expect(raffle.gliBundleList.length).toBeGreaterThanOrEqual(1);
   });
+
+  test('api-setup leaves the fixture raffle sellable for at least a month', async ({ ems, e2eEvent }) => {
+    const raffle = await ems.gliRaffles.get(e2eEvent.id, e2eEvent.raffleId);
+    const DAY_MS = 86_400_000;
+    expect(raffle).toMatchObject({ id: e2eEvent.raffleId, status: 'active', hidden: false, price: 1000 });
+    expect(raffle.numberAvailable).toBeGreaterThanOrEqual(100);
+    expect((Date.parse(raffle.endTime) - Date.now()) / DAY_MS).toBeGreaterThan(30);
+  });
 });
