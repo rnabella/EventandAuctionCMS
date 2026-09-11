@@ -29,7 +29,14 @@ import {
  * bearer token returned by `EmsApi.login()` — the same CMS admin credentials.
  */
 export class EmsApi {
-  private readonly http: HttpClient;
+  /**
+   * Exposed (not private) so tests can probe deliberately-invalid payloads
+   * that don't belong on the typed `checkin`/`reports`/etc. surfaces — e.g.
+   * the forbidden-device GLI raffle purchase case in raffle.api.spec.ts.
+   * Prefer the typed methods below for anything that represents a real,
+   * supported call shape.
+   */
+  readonly http: HttpClient;
 
   constructor(request: APIRequestContext, token: string, baseUrl: string = env.api.emsBaseUrl) {
     this.http = new HttpClient(request, baseUrl, token);
