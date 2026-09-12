@@ -190,8 +190,9 @@ export class EmsApi {
     /**
      * Cancels for real on Stripe's side (verified live: an unknown/already-cancelled record 404s
      * with `{ code: "notFound", message: "Subscription not found" }`). KNOWN GOTCHA, verified live:
-     * `list()` can still show `subscriptionStatus: "active"` for a short window immediately after a
-     * successful cancel — do not assert on that field flipping synchronously.
+     * `list()`'s `subscriptionStatus` cannot be trusted to reflect a cancellation at all — 3
+     * subscriptions cancelled during exploration on 2026-09-12 still show `active` in the list with
+     * no observed window in which it self-corrects. Never assert on this field after calling cancel.
      */
     cancel: (eventId: string, recordId: string) =>
       this.http.put<unknown>(`v1/iBid/events/${eventId}/stripe-subscriptions/${recordId}`, {}),
