@@ -52,6 +52,12 @@ export class HttpClient {
     return this.parse<T>('PATCH', path, response);
   }
 
+  /** Full replace / action-style call. Only the Stripe subscription cancel endpoint uses this verb (see `EmsApi.subscriptions.cancel`). */
+  async put<T>(path: string, data?: unknown): Promise<T> {
+    const response = await this.request.put(this.url(path), { headers: this.headers(), data });
+    return this.parse<T>('PUT', path, response);
+  }
+
   private url(path: string): string {
     return `${this.baseUrl}/${path.replace(/^\/+/, '')}`;
   }

@@ -467,6 +467,44 @@ export interface CheckoutGliRafflePurchase {
   subTotal: number;
 }
 
+/**
+ * GET v1/iBid/clients/stripe-subscriptions/ (BARE array, cross-event admin search) — same shape as
+ * the `entity` returned by POST .../guests/:guestId/subscription (creation). Verified live 2026-09-12.
+ */
+export interface StripeSubscription {
+  id: string; // internal record id — use THIS for cancel, not subscriptionId
+  eventId: string;
+  eventName: string;
+  amount: number; // cents, per-charge amount
+  l1AccountId: string;
+  accountName: string;
+  guestId: string;
+  guestName: string;
+  customerId: string; // Stripe customer id
+  productId: string;
+  productName: string | null;
+  productDescription: string | null;
+  priceId: string;
+  currency: string;
+  recurringInterval: 'week' | 'month' | string;
+  recurringIntervalCount: number; // e.g. 2 with interval "week" = bi-weekly
+  subscriptionId: string; // the real Stripe subscription id, e.g. "sub_..."
+  subscriptionStatus: 'active' | string;
+  startDate: string;
+  endDate: string;
+  passOnPaymentFee: boolean;
+  accountId: string; // Stripe Connect account id
+  subscriptionType: 'recurring' | string;
+  firstBillingDate: string;
+  cancelAtDate: string;
+  totalAmount: number; // lifetime amount actually charged so far — 0 until the first billing date passes
+  totalAppFee: number;
+  totalAmountPaidToClient: number;
+  lastPaymentDate: string; // epoch (1970-01-01) until the first real charge happens
+  created: string;
+  updated: string;
+}
+
 /** POST .../gliRafflePurchases/cancel response */
 export interface CancelledGliRafflePurchase {
   id: string;

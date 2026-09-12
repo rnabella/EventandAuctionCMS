@@ -21,6 +21,7 @@ import {
   IBidTicket,
   IBidTicketUpdate,
   PaymentRecord,
+  StripeSubscription,
   Totals,
 } from './types';
 
@@ -162,6 +163,38 @@ export class EmsApi {
      */
     update: (eventId: string, raffleId: string, raffle: Partial<IBidGliRaffleUpdate>) =>
       this.http.patch<unknown>(`v1/iBid/events/${eventId}/gli-raffles/${raffleId}`, raffle),
+  };
+
+  /**
+   * The CMS's cross-event "Regular Giving" admin list (NOT scoped to one event in its own path —
+   * every returned row carries its own eventId/eventName, so callers filter client-side). Same
+   * bearer token as every other EmsApi call. Verified live 2026-09-12.
+   */
+  readonly subscriptions = {
+    /**
+     * `subscription_status` is verified live to NOT accept an empty string as "match everything" —
+     * `subscription_status=` returns `[]` even when active rows exist for the same `q`. The literal
+     * string `"all"` was verified live to return the same rows as omitting the param entirely (the
+     * only cross-check possible without a cancelled row to test against, since every subscription
+     * against the E2E event happened to be active at verification time) — use that, not `''`.
+     */
+    list: (query: { q?: string; status?: 'active' | 'all'; limit?: number } = {}) =>
+      this.http.get<StripeSubscription[]>('v1/iBid/clients/stripe-subscriptions/', {
+        view: 'simple',
+        limit: query.limit ?? 1000,
+        offset: 0,
+        subscription_status: query.status === 'all' ? 'all' : 'active',
+        q: query.q ?? '',
+      }),
+
+    /**
+     * Cancels for real on Stripe's side (verified live: an unknown/already-cancelled record 404s
+     * with `{ code: "notFound", message: "Subscription not found" }`). KNOWN GOTCHA, verified live:
+     * `list()` can still show `subscriptionStatus: "active"` for a short window immediately after a
+     * successful cancel — do not assert on that field flipping synchronously.
+     */
+    cancel: (eventId: string, recordId: string) =>
+      this.http.put<unknown>(`v1/iBid/events/${eventId}/stripe-subscriptions/${recordId}`, {}),
   };
 
   /** Staff-side ("check-in") actions performed on a guest's behalf. */
