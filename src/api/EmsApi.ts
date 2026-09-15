@@ -188,11 +188,21 @@ export class EmsApi {
       }),
 
     /**
-     * Cancels for real on Stripe's side (verified live: an unknown/already-cancelled record 404s
-     * with `{ code: "notFound", message: "Subscription not found" }`). KNOWN GOTCHA, verified live:
-     * `list()`'s `subscriptionStatus` cannot be trusted to reflect a cancellation at all — 3
-     * subscriptions cancelled during exploration on 2026-09-12 still show `active` in the list with
-     * no observed window in which it self-corrects. Never assert on this field after calling cancel.
+     * Cancels for real on Stripe's side. KNOWN GOTCHA, verified live: `list()`'s `subscriptionStatus`
+     * cannot be trusted to reflect a cancellation at all — 3 subscriptions cancelled during
+     * exploration on 2026-09-12 still show `active` in the list with no observed window in which it
+     * self-corrects. Never assert on this field after calling cancel.
+     *
+     * Proof-of-cancellation: retrying `cancel` on an already-cancelled, real record returns HTTP 404
+     * with Stripe's own passthrough error, e.g. `{"code":"Not Found","message":"No such subscription:
+     * 'sub_...'; code: resource_missing; request-id: req_..."}` — this is Stripe itself confirming
+     * the underlying subscription is gone, not an EMS-local flag check, so retrying cancel and
+     * checking for this specific error is a sound way to prove a cancel genuinely worked (verified
+     * live 2026-09-12 and again 2026-09-15 across 5 separate real subscriptions, 5/5 consistent). An
+     * earlier note here described the retry response as a generic `{code:"notFound", message:
+     * "Subscription not found"}` — every retry against a real, previously-active record observed
+     * since has returned Stripe's own error text instead, so treat that shape as the reliable one;
+     * the generic message may only appear for a record id that was never valid to begin with.
      */
     cancel: (eventId: string, recordId: string) =>
       this.http.put<unknown>(`v1/iBid/events/${eventId}/stripe-subscriptions/${recordId}`, {}),
