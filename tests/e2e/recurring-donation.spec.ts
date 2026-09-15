@@ -28,6 +28,11 @@ let currentDonorLastName: string | undefined;
 //     a real subscription exists. donor.lastName is unique per run (newE2EDonor seeds off Date.now()),
 //     so this is precise, not a broad guest-list scan.
 test.afterEach(async ({ ems, e2eEvent }) => {
+  // Captured rather than immediately re-thrown so a failure here can't skip the sweep below — the
+  // two mechanisms must both always get a chance to run, since a primary-cancel failure (e.g. a
+  // transient network error) is exactly the kind of case the sweep's independent lookup-by-donor-name
+  // can still catch and clean up, even though it isn't the failure mode the sweep was designed for.
+  let primaryCancelError: unknown;
   if (createdSubscription) {
     const { id, subscriptionId } = createdSubscription;
     createdSubscription = undefined;
@@ -38,7 +43,7 @@ test.afterEach(async ({ ems, e2eEvent }) => {
         `FAILED TO CANCEL recurring-donation e2e test subscription — clean this up manually via the CMS ` +
           `"Regular Giving" page: record id ${id}, Stripe id ${subscriptionId}`,
       );
-      throw e;
+      primaryCancelError = e;
     }
   }
   if (currentDonorLastName) {
@@ -66,6 +71,8 @@ test.afterEach(async ({ ems, e2eEvent }) => {
       }
     }
   }
+  // Surface the primary cancel's failure (if any) only after the sweep has had its chance to run.
+  if (primaryCancelError) throw primaryCancelError;
 });
 
 // Serial within the file; `npm run test:e2e` runs lite-e2e with --workers=1.
