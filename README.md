@@ -233,11 +233,14 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
   a real `sub_...` Stripe id) is the verification oracle, cross-checked against
   the EMS admin subscription search (`ems.subscriptions.list`), and the success
   page confirms "Donation: $10" / "Frequency: Monthly". The subscription is
-  **always cancelled in a `finally` block**, real or test failure alike — see
-  gotchas below for why this slice is the one exception to this project's
+  **always cancelled via a `test.afterEach` hook**, real or test-timeout
+  failure alike — a stronger guarantee than the test body's own `finally`,
+  since Playwright runs `afterEach` (with its own fresh timeout budget) even
+  after a test-timeout teardown, when a body-local `finally` never resumes —
+  see gotchas below for why this slice is the one exception to this project's
   "accumulate real fixture data" convention.
-- **Recurring Donations admin API** (`EmsApi.subscriptions`, exercised via the
-  e2e spec above rather than its own API-only spec): `list()` searches
+- **Recurring Donations admin API** (`EmsApi.subscriptions`,
+  `tests/api/recurring-donations.api.spec.ts`, 2 tests): `list()` searches
   cross-event by guest name/email (`v1/iBid/clients/stripe-subscriptions/`,
   paginated, `subscription_status: 'active' | 'all'`) and `cancel()` cancels a
   real Stripe subscription (`PUT v1/iBid/events/:eventId/stripe-subscriptions/:id`).
@@ -658,12 +661,17 @@ just enough to avoid it.
   slice's cancel discipline exists to keep one shared lot's bid state clean
   between runs; this one exists because an uncancelled subscription is a real
   Stripe subscription that keeps attempting to charge the test card on its
-  real billing schedule for however long the frequency's term runs (up to
-  ~3 years for "Every 3 Years"-style long intervals) — not a test-data
-  cosmetic issue, an ongoing real-world side effect. `recurring-donation.spec.ts`
-  wraps setup + verification in a `try`/`finally` and cancels unconditionally,
-  logging the record id and Stripe id loudly on failure so a human can clean
-  up by hand if the automated cancel itself fails.
+  real billing schedule for up to ~3 years — that window comes from
+  `cancelAt`'s **default value** (+3 years from creation), independent of
+  which frequency (Bi-weekly, Monthly, Every 3 Months, Every 6 Months, Every
+  Year) was chosen — not a test-data cosmetic issue, an ongoing real-world
+  side effect. `recurring-donation.spec.ts` guarantees cancellation via a
+  `test.afterEach` hook (not the test body's own `finally`, which Playwright
+  skips after a test-timeout teardown) that cancels the recorded subscription
+  and, independently, sweeps for any subscription created under this run's
+  donor last name that was never locally observed, logging the record id and
+  Stripe id loudly on failure so a human can clean up by hand if the
+  automated cancel itself fails.
 - **There is no event-scoped check-in API for subscriptions at all** — no
   `checkin/v1/events/:eventId/guests/:guestId/subscriptions` endpoint exists
   the way donations/tickets/bids/raffle purchases have one. Verification is

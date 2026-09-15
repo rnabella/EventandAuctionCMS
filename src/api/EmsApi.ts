@@ -193,16 +193,26 @@ export class EmsApi {
      * exploration on 2026-09-12 still show `active` in the list with no observed window in which it
      * self-corrects. Never assert on this field after calling cancel.
      *
-     * Proof-of-cancellation: retrying `cancel` on an already-cancelled, real record returns HTTP 404
-     * with Stripe's own passthrough error, e.g. `{"code":"Not Found","message":"No such subscription:
-     * 'sub_...'; code: resource_missing; request-id: req_..."}` — this is Stripe itself confirming
-     * the underlying subscription is gone, not an EMS-local flag check, so retrying cancel and
-     * checking for this specific error is a sound way to prove a cancel genuinely worked (verified
-     * live 2026-09-12 and again 2026-09-15 across 5 separate real subscriptions, 5/5 consistent). An
-     * earlier note here described the retry response as a generic `{code:"notFound", message:
-     * "Subscription not found"}` — every retry against a real, previously-active record observed
-     * since has returned Stripe's own error text instead, so treat that shape as the reliable one;
-     * the generic message may only appear for a record id that was never valid to begin with.
+     * Proof-of-cancellation (spot-check technique): retrying `cancel` on an already-cancelled, real
+     * record returns HTTP 404 with Stripe's own passthrough error, e.g. `{"code":"Not Found",
+     * "message":"No such subscription: 'sub_...'; code: resource_missing; request-id: req_..."}` —
+     * this is Stripe itself confirming the underlying subscription is gone, not an EMS-local flag
+     * check, so retrying cancel and checking for this specific error is strong evidence the record
+     * is gone from Stripe under the account EMS queries (verified live 2026-09-12 and again
+     * 2026-09-15 across 5 separate real subscriptions, 5/5 consistent). An earlier note here
+     * described the retry response as a generic `{code:"notFound", message:"Subscription not
+     * found"}` — every retry against a real, previously-active record observed since has returned
+     * Stripe's own error text instead, so treat that shape as the reliable one; the generic message
+     * may only appear for a record id that was never valid to begin with.
+     *
+     * Stronger, more conclusive proof (2026-09-16): checked `guests.paymentTransactions` for the 2
+     * oldest cancelled subscriptions in this suite's history (created 2026-09-12,
+     * `firstBillingDate: 2026-09-14T00:00:00.000+00:00`, now past) — both guests show ZERO payment
+     * transactions. Since retry-404 alone only proves "EMS thinks it's cancelled" (a hypothesized
+     * Connect-account-context mismatch could in theory produce a false-404 on retry without Stripe
+     * actually having stopped billing), an absent charge on a billing date that has already elapsed
+     * directly rules that out — no EMS-local-flag-only false positive could produce it. Prefer this
+     * method going forward for any record whose `firstBillingDate` has passed.
      */
     cancel: (eventId: string, recordId: string) =>
       this.http.put<unknown>(`v1/iBid/events/${eventId}/stripe-subscriptions/${recordId}`, {}),

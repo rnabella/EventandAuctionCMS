@@ -1,10 +1,13 @@
 import { test, expect } from '../fixtures';
 
 test.describe('EMS admin API > Regular Giving (Stripe subscriptions)', () => {
-  test('the admin search endpoint accepts the shared bearer token and returns shaped rows', async ({ ems, e2eEvent }) => {
+  test('the admin search endpoint accepts the shared bearer token and returns shaped rows', async ({ ems }) => {
     const rows = await ems.subscriptions.list({ q: 'QA E2E', status: 'all' });
-    // This event has had real QA subscriptions created against it before (from live exploration on
-    // 2026-09-12); if none currently exist, this just confirms the endpoint itself works and returns [].
+    // Verified live 2026-09-16: this event has 11+ real QA subscriptions (cancelled rows persist in
+    // the list per this slice's own documented eventual-consistency gotcha), so asserting a non-empty
+    // result is meaningful here rather than vacuous.
+    expect(Array.isArray(rows)).toBe(true);
+    expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
       expect(row).toMatchObject({
         eventId: expect.any(String),
@@ -20,6 +23,13 @@ test.describe('EMS admin API > Regular Giving (Stripe subscriptions)', () => {
 
   test('cancelling an unknown subscription record id 404s', async ({ ems, e2eEvent }) => {
     const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
-    await expect(ems.subscriptions.cancel(e2eEvent.id, ZERO_UUID)).rejects.toThrow();
+    // Verified live 2026-09-16 against this exact id: HTTP 404, EMS's generic shape (not Stripe's
+    // passthrough error — see EmsApi.ts's subscriptions.cancel docblock: the generic message is what
+    // appears for a record id that was never valid to begin with, vs. Stripe's own "No such
+    // subscription" text on a retry against a real, previously-active record).
+    await expect(ems.subscriptions.cancel(e2eEvent.id, ZERO_UUID)).rejects.toMatchObject({
+      status: 404,
+      code: 'notFound',
+    });
   });
 });
