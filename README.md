@@ -224,6 +224,23 @@ Donations → Payment Collection → Event Displays → Notifications → Guests
   via `ensureRaffleSellable` (mirrors `ensureTicketSellable`), never cancels
   purchases (follows the donations/tickets precedent, accumulating real fixture
   data), and the bundle purchase path (3 for $25) is deliberately out of scope.
+- **Recurring Donations — setup journey (Lite UI + EMS API)**
+  (`tests/e2e/recurring-donation.spec.ts`): a new donor picks the "Recurring"
+  tab, selects Monthly + the $10 preset, registers with a Stripe test card
+  (processing fee off), and clicks "Set Up Donation"; the subscription-creation
+  response itself (`eventId`, `guestId`, `amount`, `recurringInterval: 'month'`,
+  `recurringIntervalCount: 1`, `subscriptionStatus: 'active'`, `totalAmount: 0`,
+  a real `sub_...` Stripe id) is the verification oracle, cross-checked against
+  the EMS admin subscription search (`ems.subscriptions.list`), and the success
+  page confirms "Donation: $10" / "Frequency: Monthly". The subscription is
+  **always cancelled in a `finally` block**, real or test failure alike — see
+  gotchas below for why this slice is the one exception to this project's
+  "accumulate real fixture data" convention.
+- **Recurring Donations admin API** (`EmsApi.subscriptions`, exercised via the
+  e2e spec above rather than its own API-only spec): `list()` searches
+  cross-event by guest name/email (`v1/iBid/clients/stripe-subscriptions/`,
+  paginated, `subscription_status: 'active' | 'all'`) and `cancel()` cancels a
+  real Stripe subscription (`PUT v1/iBid/events/:eventId/stripe-subscriptions/:id`).
 
 ### Known limitations / follow-up work
 
@@ -626,3 +643,64 @@ just enough to avoid it.
   and ticket specs unaffected. Similar label-text assumptions in other
   confirmation or report pages should be rechecked when adding new payment
   types.
+
+#### Recurring Donations (Lite UI + EMS API) gotchas
+
+- **Setting up a subscription creates zero payment transactions and moves no
+  totals.** Unlike every other slice, "Set Up Donation" doesn't charge
+  anything — the created record's own `totalAmount` is `0`, and the first real
+  charge lands on `firstBillingDate`, always a few days out. Verify against
+  the subscription-creation response (and `ems.subscriptions.list`) directly;
+  `reports/totals` and `guests/:id/payments/transactions` won't show anything
+  yet and are the wrong oracle here.
+- **This is the only slice that MUST cancel after every e2e run, real Stripe
+  billing reasons rather than a shared-fixture-reset concern.** The auction
+  slice's cancel discipline exists to keep one shared lot's bid state clean
+  between runs; this one exists because an uncancelled subscription is a real
+  Stripe subscription that keeps attempting to charge the test card on its
+  real billing schedule for however long the frequency's term runs (up to
+  ~3 years for "Every 3 Years"-style long intervals) — not a test-data
+  cosmetic issue, an ongoing real-world side effect. `recurring-donation.spec.ts`
+  wraps setup + verification in a `try`/`finally` and cancels unconditionally,
+  logging the record id and Stripe id loudly on failure so a human can clean
+  up by hand if the automated cancel itself fails.
+- **There is no event-scoped check-in API for subscriptions at all** — no
+  `checkin/v1/events/:eventId/guests/:guestId/subscriptions` endpoint exists
+  the way donations/tickets/bids/raffle purchases have one. Verification is
+  limited to the creation response itself, or the cross-event admin search
+  endpoint (`v1/iBid/clients/stripe-subscriptions/`, `EmsApi.subscriptions.list`)
+  — which is NOT scoped by event in its URL; filter client-side on the
+  returned `eventId` (the spec searches by `q: donor.lastName` and asserts
+  `eventId` in the result rows instead).
+- **Cancel is real but eventually-consistent in the list.** A cancelled
+  subscription can still show `subscriptionStatus: "active"` in
+  `subscriptions.list()` for a short window afterward — 3 subscriptions
+  cancelled during exploration on 2026-09-12 still showed `active` with no
+  observed self-correcting window. Don't assert on that field flipping
+  synchronously after calling `cancel`. To independently prove a cancel
+  genuinely worked (rather than trusting `list()`), retry `cancel` on the same
+  record: on an already-cancelled real subscription this returns HTTP 404 with
+  **Stripe's own passthrough error**, e.g. `{"code":"Not Found","message":"No
+  such subscription: 'sub_...'; code: resource_missing; request-id: req_..."}`
+  — Stripe itself confirming the underlying subscription is gone, not an
+  EMS-local flag check. Verified live 2026-09-12 and again 2026-09-15 across 5
+  separate real subscriptions, 5/5 consistent. (An earlier working note
+  assumed the generic EMS shape `{code:"notFound", message:"Subscription not
+  found"}` instead — that shape wasn't observed against any real,
+  previously-active record; it may only occur for an id that was never valid
+  to begin with. See `EmsApi.ts`'s `subscriptions.cancel` docblock.)
+- **The CMS has a whole top-level "REGULAR GIVING" nav section**, a sibling to
+  "CAMPAIGNS" rather than something nested under a specific event — a
+  cross-event admin view of every subscription with search plus a cancel (✕)
+  action per row. Worth knowing about for anyone debugging this feature by
+  hand; it's the human-facing equivalent of `EmsApi.subscriptions`.
+- **The frequency dropdown isn't a `<select>`, but it exposes stable, robust
+  ARIA regardless.** The plan flagged "click the current value's text to open
+  it" as a fragile fallback locator strategy going in. In practice the
+  dropdown's trigger is simply the page's only `div[role="combobox"]`, and
+  opening it reveals a `role="listbox"` (`aria-label="Frequency options"`) of
+  `role="option"` children — both roles hold no matter which value is
+  currently selected (verified live 2026-09-12 by selecting "Monthly" then
+  re-opening to switch to "Bi-weekly"). `DonatePage.selectFrequency()` uses
+  `getByRole('combobox')` + the listbox's accessible name, never the
+  current-value-text trick.
