@@ -15,12 +15,13 @@ test.describe.serial('Lite UI > Donations (donor journey, verified via the EMS A
     page,
     ems,
     e2eEvent,
+    totalsDelta,
   }) => {
     test.setTimeout(180_000);
     const donor = newE2EDonor();
     const donorName = `${donor.firstName} ${donor.lastName}`;
     const amount = 1000;
-    const before = await ems.reports.totals(e2eEvent.id);
+    const totals = await totalsDelta(e2eEvent.id);
 
     // 1. Choose the amount
     const donate = new DonatePage(page);
@@ -43,9 +44,7 @@ test.describe.serial('Lite UI > Donations (donor journey, verified via the EMS A
     await confirm.waitForPage();
     await confirm.expectAmount(amount);
     const purchaseId = await confirm.placeDonation();
-    await expect
-      .poll(async () => (await ems.reports.totals(e2eEvent.id)).donation.raised - before.donation.raised, { timeout: 15_000 })
-      .toBe(amount);
+    await totals.expectDelta((t) => t.donation.raised, amount);
 
     // 4. Pay with the saved card, exactly $10.00
     const checkout = new CheckoutPage(page);
@@ -78,9 +77,9 @@ test.describe.serial('Lite UI > Donations (donor journey, verified via the EMS A
     const rows = await ems.reports.allDonations(e2eEvent.id);
     expect(rows).toContainEqual(expect.objectContaining({ name: donorName, totalValue: amount, qty: 1 }));
 
-    const after = await ems.reports.totals(e2eEvent.id);
-    expect(after.donation.raised - before.donation.raised).toBe(amount);
-    expect(after.donation.totalDonation - before.donation.totalDonation).toBe(1);
-    expect(after.totalRaised - before.totalRaised).toBe(amount);
+    const after = await totals.now();
+    expect(after.donation.raised - totals.before.donation.raised).toBe(amount);
+    expect(after.donation.totalDonation - totals.before.donation.totalDonation).toBe(1);
+    expect(after.totalRaised - totals.before.totalRaised).toBe(amount);
   });
 });

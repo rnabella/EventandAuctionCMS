@@ -14,12 +14,13 @@ test.describe.serial('Lite UI > GLI Raffle (donor journey, verified via the EMS 
     page,
     ems,
     e2eEvent,
+    totalsDelta,
   }) => {
     test.setTimeout(240_000);
     const donor = newE2EDonor();
     const raffle = await ems.gliRaffles.get(e2eEvent.id, e2eEvent.raffleId);
     const price = raffle.price; // 1000
-    const totalsBefore = await ems.reports.totals(e2eEvent.id);
+    const totals = await totalsDelta(e2eEvent.id);
     const itemsBefore = (await ems.reports.gliRaffleItems(e2eEvent.id)).find((r) => r.id === e2eEvent.raffleId);
     expect(itemsBefore, 'fixture raffle not found in items/gliRaffles').toBeDefined();
 
@@ -77,10 +78,10 @@ test.describe.serial('Lite UI > GLI Raffle (donor journey, verified via the EMS 
     expect(outstanding.grandTotal).toBe(0);
 
     // Deltas only — see the plan's Global Constraints (this purchase is intentionally never cancelled).
-    const totalsAfter = await ems.reports.totals(e2eEvent.id);
-    expect(totalsAfter.raffles.totalRaised - totalsBefore.raffles.totalRaised).toBe(price);
-    expect(totalsAfter.raffles.raffleEntries - totalsBefore.raffles.raffleEntries).toBe(1);
-    expect(totalsAfter.totalRaised - totalsBefore.totalRaised).toBe(price);
+    const totalsAfter = await totals.now();
+    expect(totalsAfter.raffles.totalRaised - totals.before.raffles.totalRaised).toBe(price);
+    expect(totalsAfter.raffles.raffleEntries - totals.before.raffles.raffleEntries).toBe(1);
+    expect(totalsAfter.totalRaised - totals.before.totalRaised).toBe(price);
 
     const itemsAfter = (await ems.reports.gliRaffleItems(e2eEvent.id)).find((r) => r.id === e2eEvent.raffleId);
     expect(itemsAfter!.bought - itemsBefore!.bought).toBe(1);

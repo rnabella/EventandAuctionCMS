@@ -118,10 +118,11 @@ test.describe.serial('Lite UI > Buy It Now (donor journey, verified via the EMS 
     page,
     ems,
     e2eEvent,
+    totalsDelta,
   }) => {
     test.setTimeout(240_000);
     const donor = newE2EDonor();
-    const before = await ems.reports.totals(e2eEvent.id);
+    const totals = await totalsDelta(e2eEvent.id);
 
     const lots = new LotsPage(page);
     await lots.goto();
@@ -166,7 +167,7 @@ test.describe.serial('Lite UI > Buy It Now (donor journey, verified via the EMS 
     expect(outstanding.grandTotal).toBe(0);
 
     // Buy-now purchases are part of fundraising totals, unlike tickets — pin that.
-    const after = await ems.reports.totals(e2eEvent.id);
-    expect(after.buyItNow.raised - before.buyItNow.raised).toBe(5000);
+    const after = await totals.now();
+    expect(after.buyItNow.raised - totals.before.buyItNow.raised).toBe(5000);
   });
 });

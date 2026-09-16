@@ -1,5 +1,4 @@
 import { test, expect } from '../fixtures';
-import { Totals } from '../../src/api/types';
 
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -7,7 +6,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // These tests move the E2E event's totals, so they run serially and each one
 // cancels what it created — the suite leaves totals exactly where it found them.
 test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
-  const donationRaised = (t: Totals) => t.donation.raised;
   // The report accumulates one $10/qty-1 row per e2e/API run and NEVER drops
   // it again — see the note below the `finally` block — so a fixed presence
   // check (`toContainEqual`) would still pass with a stale row left over from
@@ -15,9 +13,9 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
   // instead. `allDonations` pages past the report's default 50-row page.
   const matchingRowCount = (rows: { totalValue: number; qty: number }[]) => rows.filter((r) => r.totalValue === 1000 && r.qty === 1).length;
 
-  test('a $10 donation is accepted, counts toward totals immediately, and cancelling reverses it', async ({ ems, lite, e2eEvent }) => {
+  test('a $10 donation is accepted, counts toward totals immediately, and cancelling reverses it', async ({ ems, lite, e2eEvent, totalsDelta }) => {
     const pledgeId = (await lite.pledgeItem(e2eEvent.id)).id;
-    const before = await ems.reports.totals(e2eEvent.id);
+    const totals = await totalsDelta(e2eEvent.id);
     const rowsBefore = matchingRowCount(await ems.reports.allDonations(e2eEvent.id));
 
     const result = await ems.checkin.makeDonation(e2eEvent.id, e2eEvent.apiGuestId, { pledgeId, amount: 1000 });
@@ -26,9 +24,7 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
       expect(result).toMatchObject({ code: 'accepted', amount: 1000, pledgeId });
       expect(result.id).toMatch(UUID);
 
-      await expect
-        .poll(async () => donationRaised(await ems.reports.totals(e2eEvent.id)) - donationRaised(before), { timeout: 15_000 })
-        .toBe(1000);
+      await totals.expectDelta((t) => t.donation.raised, 1000);
       await expect
         .poll(async () => matchingRowCount(await ems.reports.allDonations(e2eEvent.id)), { timeout: 15_000 })
         .toBe(rowsBefore + 1);
@@ -37,9 +33,7 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
       expect(cancelled).toMatchObject({ id: result.id, amount: 1000, guestId: e2eEvent.apiGuestId });
     }
 
-    await expect
-      .poll(async () => donationRaised(await ems.reports.totals(e2eEvent.id)) - donationRaised(before), { timeout: 15_000 })
-      .toBe(0);
+    await totals.expectDelta((t) => t.donation.raised, 0);
     // NOT asserted: matchingRowCount returning to rowsBefore. Verified live
     // (2026-09-06) that a cancelled donation's row never disappears from
     // `reports/donation`, no matter how long you poll — see the `status`
@@ -47,9 +41,9 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
     // reverting (above) is the correct oracle for "cancelling reverses it";
     // the report row itself joins the same permanent accumulation as every
     // other "new row every run" entity in this project (see README).
-    const after = await ems.reports.totals(e2eEvent.id);
-    expect(after.donation.totalDonation).toBe(before.donation.totalDonation);
-    expect(after.totalRaised).toBe(before.totalRaised);
+    const after = await totals.now();
+    expect(after.donation.totalDonation).toBe(totals.before.donation.totalDonation);
+    expect(after.totalRaised).toBe(totals.before.totalRaised);
   });
 
   test('cancelling the same donation twice is idempotent', async ({ ems, lite, e2eEvent }) => {

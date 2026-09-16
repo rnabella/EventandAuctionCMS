@@ -3,6 +3,7 @@ import { EmsApi } from '../src/api/EmsApi';
 import { LiteApi } from '../src/api/LiteApi';
 import { readEmsToken } from '../src/api/auth';
 import { env } from '../src/config/env';
+import { Totals } from '../src/api/types';
 
 export interface E2EEvent {
   id: string;
@@ -21,10 +22,28 @@ export interface E2EEvent {
   raffleId: string;
 }
 
+/**
+ * Every e2e/API test that moves fundraising totals follows the same shape: snapshot
+ * `reports/totals` before acting, then either poll a specific field's delta as the oracle
+ * that the write has landed, or take a fresh read afterward to check several fields at once
+ * against that same snapshot. This wraps both without changing either's timing/poll behavior
+ * — it was originally envisioned in the fundraising-suite design spec (§4.2) but never built.
+ */
+export interface TotalsDeltaTracker {
+  /** `reports/totals` at the moment this tracker was created. */
+  readonly before: Totals;
+  /** A fresh, unpolled read of `reports/totals` right now — for comparing several fields against `before` at once, once something else has already confirmed the write landed. */
+  now(): Promise<Totals>;
+  /** Polls `reports/totals` until `select(current) - select(before)` equals `expectedDelta`. The usual oracle for "the write has landed" before reading anything else. */
+  expectDelta(select: (t: Totals) => number, expectedDelta: number, opts?: { timeout?: number }): Promise<void>;
+}
+
 type FundraisingFixtures = {
   ems: EmsApi;
   e2eEvent: E2EEvent;
   lite: LiteApi;
+  /** Call with the event id at the point a test wants its "before" snapshot taken. */
+  totalsDelta: (eventId: string) => Promise<TotalsDeltaTracker>;
 };
 
 /**
@@ -49,6 +68,20 @@ export const test = base.extend<FundraisingFixtures>({
   },
   lite: async ({ request }, use) => {
     await use(new LiteApi(request));
+  },
+  totalsDelta: async ({ ems }, use) => {
+    await use(async (eventId: string) => {
+      const before = await ems.reports.totals(eventId);
+      return {
+        before,
+        now: () => ems.reports.totals(eventId),
+        expectDelta: async (select, expectedDelta, opts = {}) => {
+          await expect
+            .poll(async () => select(await ems.reports.totals(eventId)) - select(before), { timeout: opts.timeout ?? 15_000 })
+            .toBe(expectedDelta);
+        },
+      };
+    });
   },
 });
 

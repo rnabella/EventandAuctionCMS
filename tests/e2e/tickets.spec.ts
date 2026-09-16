@@ -15,13 +15,14 @@ test.describe.serial('Lite UI > Tickets (donor journey, verified via the EMS API
     ems,
     lite,
     e2eEvent,
+    totalsDelta,
   }) => {
     test.setTimeout(240_000);
     const donor = newE2EDonor();
     const ticket = (await lite.tickets(e2eEvent.id)).find((t) => t.id === e2eEvent.ticketId);
     expect(ticket, 'fixture ticket must be on sale (api-setup ensures this)').toBeDefined();
     const price = ticket!.price; // 2000
-    const before = await ems.reports.totals(e2eEvent.id);
+    const totals = await totalsDelta(e2eEvent.id);
 
     // 1. Pick one ticket
     const tickets = new TicketsPage(page);
@@ -78,8 +79,8 @@ test.describe.serial('Lite UI > Tickets (donor journey, verified via the EMS API
     expect(outstanding.grandTotal).toBe(0);
 
     // Tickets are not part of the fundraising totals — pin that fact.
-    const after = await ems.reports.totals(e2eEvent.id);
-    expect(after.totalRaised).toBe(before.totalRaised);
+    const after = await totals.now();
+    expect(after.totalRaised).toBe(totals.before.totalRaised);
 
     // 5. The donor sees the ticket under My Tickets
     const myTickets = new MyTicketsPage(page);
