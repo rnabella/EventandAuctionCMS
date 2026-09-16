@@ -1,7 +1,7 @@
 import { test as base, expect } from '@playwright/test';
 import { EmsApi } from '../src/api/EmsApi';
 import { LiteApi } from '../src/api/LiteApi';
-import { readEmsToken } from '../src/api/auth';
+import { readEmsToken, readE2EApiGuestId } from '../src/api/auth';
 import { env } from '../src/config/env';
 import { Totals } from '../src/api/types';
 
@@ -58,7 +58,9 @@ export const test = base.extend<FundraisingFixtures>({
     await use({
       id: env.e2e.eventId,
       liteUiBaseUrl: env.e2e.liteUiBaseUrl,
-      apiGuestId: env.e2e.apiGuestId,
+      // api-setup's ensureApiGuest (src/api/guestFixture.ts) persists a fresh id here only when
+      // the static env value stops resolving — prefer it when present, same fallback order it uses.
+      apiGuestId: readE2EApiGuestId() ?? env.e2e.apiGuestId,
       ticketId: env.e2e.ticketId,
       lotId: env.e2e.lotId,
       buyNowLotId: env.e2e.buyNowLotId,

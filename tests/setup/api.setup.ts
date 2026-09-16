@@ -5,6 +5,7 @@ import { env } from '../../src/config/env';
 import { ensureTicketSellable } from '../../src/api/ticketFixture';
 import { ensureLotSellable, assertNoStrayBids } from '../../src/api/lotFixture';
 import { ensureRaffleSellable } from '../../src/api/raffleFixture';
+import { ensureApiGuest } from '../../src/api/guestFixture';
 
 /**
  * Logs into the EMS API once per run and persists the bearer token, mirroring
@@ -38,4 +39,9 @@ setup('authenticate against the EMS API and prepare fixtures', { tag: '@smoke' }
   // confusing mismatch. Fail fast here instead. Buy-now purchases aren't "bids" in this
   // report's sense, so only the silent and sealed lots are checked.
   await assertNoStrayBids(ems, env.e2e.eventId, [env.e2e.lotId, env.e2e.sealedLotId]);
+  // The pure-API donation tests need a registered, card-pre-authorised guest to call
+  // checkin.makeDonation against. Unlike the fixtures above, a deleted guest can't be healed
+  // back under its old id — this only launches a browser (for the reCAPTCHA-gated registration
+  // form) when env.e2e.apiGuestId (or a previously-healed id) has actually stopped resolving.
+  await ensureApiGuest(ems, env.e2e.eventId, env.e2e.apiGuestId);
 });
