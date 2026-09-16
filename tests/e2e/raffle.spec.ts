@@ -13,7 +13,6 @@ test.describe.serial('Lite UI > GLI Raffle (donor journey, verified via the EMS 
   test('a new donor buys one $10 raffle entry with a test card, and the EMS API records the paid gli_raffle_purchase', async ({
     page,
     ems,
-    lite,
     e2eEvent,
   }) => {
     test.setTimeout(240_000);
@@ -64,7 +63,13 @@ test.describe.serial('Lite UI > GLI Raffle (donor journey, verified via the EMS 
     const [payment] = await ems.guests.paymentTransactions(e2eEvent.id, guestId);
     expect(payment).toMatchObject({ status: 'paid', processor: 'stripe', amount: price, cardLast4: '4242', currency: 'USD' });
     expect(payment.paymentTransactions).toContainEqual(
-      expect.objectContaining({ recordType: 'gli_raffle_purchase', itemId: e2eEvent.raffleId, amountPaid: price, paymentStatus: 'paid', itemCount: 1 }),
+      expect.objectContaining({
+        recordType: 'gli_raffle_purchase',
+        itemId: e2eEvent.raffleId,
+        amountPaid: price,
+        paymentStatus: 'paid',
+        itemCount: 1,
+      }),
     );
 
     const outstanding = await ems.guests.checkout(e2eEvent.id, guestId);
