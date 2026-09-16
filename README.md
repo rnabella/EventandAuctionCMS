@@ -174,10 +174,20 @@ product from cms-next — don't use it. Everything else in the template
 domain-swapped from the US values — confirm each one, and create/verify a
 full set of UK fundraising fixtures (ticket/lots/raffle/donation-ready
 guest) the same way the US ones were, before relying on a run beyond login.
-The existing Page Object Model (every locator under `src/pages/cms/`) was
-built and verified only against the US `/cms-next/` DOM; if the UK app's
-`/manage/` path renders differently in practice, expect real page-object
-fixes to be needed, not just this config swap.
+
+`TEST_EVENT_ID` is also confirmed live — `QAEVENTAPPUK2026` (account
+`qaclientssuuk`), found by searching the UK events list for a long-lived
+(05/01/2026–31/12/2026) dedicated QA campaign rather than one of the dozens
+of one-day scratch test events around it. The checklist suite's Page Object
+Model works against it **completely unmodified** — same DOM, same routes —
+confirming `/cms-next/` really is the same app on both domains. One genuine
+(not a bug) cross-region gap found running it: this UK event's checklist has
+no "Set up the ability for DAF Pay" item at all, because DAF (Donor-Advised
+Fund) is a US charitable-giving/tax concept that doesn't apply to UK
+charities — `checklistData.ts`'s `CHECKLIST_SECTIONS` stays US-shaped on
+purpose, so `checklist.spec.ts`'s "every item" and "completion percentage"
+tests aren't expected to pass as-is against a UK event; the section-heading
+test (including the "Prize Draw" section below) does.
 
 ## Structure
 
