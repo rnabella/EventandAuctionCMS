@@ -31,8 +31,7 @@ async function cancelTicketPurchaseTolerating500(ems: EmsApi, eventId: string, g
 const ticketLinesTotal = (c: GuestCheckout, ticketId: string) =>
   c.ticketPurchases.filter((t) => t.itemId === ticketId).reduce((sum, t) => sum + t.totalAmount, 0);
 
-const ticketLineCount = (c: GuestCheckout, ticketId: string) =>
-  c.ticketPurchases.filter((t) => t.itemId === ticketId).length;
+const ticketLineCount = (c: GuestCheckout, ticketId: string) => c.ticketPurchases.filter((t) => t.itemId === ticketId).length;
 
 // Reserves and cancels real ticket purchases for the QA guest — serial, self-cleaning.
 test.describe.serial('EMS check-in API > ticket purchases (reserve / cancel)', () => {
@@ -45,7 +44,9 @@ test.describe.serial('EMS check-in API > ticket purchases (reserve / cancel)', (
     try {
       expect(result).toMatchObject({ code: 'accepted', ticketId: e2eEvent.ticketId, amount: 2000, count: 1 });
       await expect
-        .poll(async () => ticketLineCount(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId), { timeout: 15_000 })
+        .poll(async () => ticketLineCount(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId), {
+          timeout: 15_000,
+        })
         .toBe(linesBefore + 1);
       const during = await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId);
       expect(during.ticketPurchases).toContainEqual(
@@ -57,13 +58,18 @@ test.describe.serial('EMS check-in API > ticket purchases (reserve / cancel)', (
     }
 
     await expect
-      .poll(async () => ticketLineCount(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId), { timeout: 15_000 })
+      .poll(async () => ticketLineCount(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId), {
+        timeout: 15_000,
+      })
       .toBe(linesBefore);
     expect(ticketLinesTotal(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId)).toBe(ticketTotalBefore);
   });
 
   test('cancelling a ticket purchase should return 200 (known bug sc-98155: returns 500)', async ({ ems, e2eEvent }) => {
-    test.fail(true, 'sc-98155 — ticketPurchases/cancel returns HTTP 500 although the purchase is cancelled. Remove this annotation when fixed.');
+    test.fail(
+      true,
+      'sc-98155 — ticketPurchases/cancel returns HTTP 500 although the purchase is cancelled. Remove this annotation when fixed.',
+    );
     const linesBefore = ticketLineCount(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId);
     const [result] = await ems.checkin.purchaseTickets(e2eEvent.id, e2eEvent.apiGuestId, { ticketId: e2eEvent.ticketId, count: 1 });
     expect(result.code).toBe('accepted');
@@ -73,7 +79,9 @@ test.describe.serial('EMS check-in API > ticket purchases (reserve / cancel)', (
       // Either outcome (200 or the sc-98155 500) cancels the purchase; a second cancel would
       // only 404, so cleanup is verified via the basket rather than retried.
       await expect
-        .poll(async () => ticketLineCount(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId), { timeout: 15_000 })
+        .poll(async () => ticketLineCount(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.ticketId), {
+          timeout: 15_000,
+        })
         .toBe(linesBefore);
     }
   });
@@ -90,9 +98,10 @@ test.describe('EMS check-in API > ticket purchases (validation)', () => {
   });
 
   test('an unknown ticket id returns 404 notFound', async ({ ems, e2eEvent }) => {
-    await expect(
-      ems.checkin.purchaseTickets(e2eEvent.id, e2eEvent.apiGuestId, { ticketId: ZERO_UUID, count: 1 }),
-    ).rejects.toMatchObject({ status: 404, code: 'notFound' });
+    await expect(ems.checkin.purchaseTickets(e2eEvent.id, e2eEvent.apiGuestId, { ticketId: ZERO_UUID, count: 1 })).rejects.toMatchObject({
+      status: 404,
+      code: 'notFound',
+    });
   });
 
   test('cancelling an unknown ticket purchase returns 404 notFound', async ({ ems, e2eEvent }) => {

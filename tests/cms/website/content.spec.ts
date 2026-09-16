@@ -3,7 +3,9 @@ import { ContentPage } from '../../../src/pages/cms/website/ContentPage';
 import { env } from '../../../src/config/env';
 
 test.describe('CMS Fundraising Website > Content', () => {
-  test('saves the homepage video URL (checklist: Add your homepage text, homepage image or video and additional info text)', async ({ page }) => {
+  test('saves the homepage video URL (checklist: Add your homepage text, homepage image or video and additional info text)', async ({
+    page,
+  }) => {
     const contentPage = new ContentPage(page);
     await contentPage.goto(env.testEventId);
 

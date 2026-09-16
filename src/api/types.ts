@@ -403,10 +403,28 @@ export interface IBidGliRaffle {
 
 export type IBidGliRaffleUpdate = Pick<
   IBidGliRaffle,
-  | 'id' | 'eventId' | 'displayNumber' | 'title' | 'status' | 'hidden' | 'shortId'
-  | 'price' | 'numberAvailable' | 'startTime' | 'endTime' | 'raffleMode' | 'minimumAge'
-  | 'countryRegion' | 'jurisdiction' | 'licenceNumber' | 'licensee' | 'splitPercentage'
-  | 'currencyCode' | 'started' | 'suspended' | 'bundles'
+  | 'id'
+  | 'eventId'
+  | 'displayNumber'
+  | 'title'
+  | 'status'
+  | 'hidden'
+  | 'shortId'
+  | 'price'
+  | 'numberAvailable'
+  | 'startTime'
+  | 'endTime'
+  | 'raffleMode'
+  | 'minimumAge'
+  | 'countryRegion'
+  | 'jurisdiction'
+  | 'licenceNumber'
+  | 'licensee'
+  | 'splitPercentage'
+  | 'currencyCode'
+  | 'started'
+  | 'suspended'
+  | 'bundles'
 >;
 
 export interface IBidGliRaffleBundle {

@@ -63,7 +63,13 @@ test.describe.serial('Lite UI > Tickets (donor journey, verified via the EMS API
     const [payment] = await ems.guests.paymentTransactions(e2eEvent.id, guestId);
     expect(payment).toMatchObject({ status: 'paid', processor: 'stripe', amount: price, cardLast4: '4242', currency: 'USD' });
     expect(payment.paymentTransactions).toContainEqual(
-      expect.objectContaining({ recordType: 'ticket_purchase', itemId: e2eEvent.ticketId, amountPaid: price, paymentStatus: 'paid', itemCount: 1 }),
+      expect.objectContaining({
+        recordType: 'ticket_purchase',
+        itemId: e2eEvent.ticketId,
+        amountPaid: price,
+        paymentStatus: 'paid',
+        itemCount: 1,
+      }),
     );
     expect(payment.paymentTransactions).toContainEqual(expect.objectContaining({ recordType: 'ticket_booking_fee', amountPaid: 0 }));
 

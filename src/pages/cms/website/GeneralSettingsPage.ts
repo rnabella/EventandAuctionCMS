@@ -28,12 +28,17 @@ export class GeneralSettingsPage extends BasePage {
     return this.generalSettings.field('Website url:').inputValue();
   }
 
-  async setSocialLink(network: 'Facebook:' | 'X (formerly Twitter):' | 'LinkedIn:' | 'Instagram:' | 'YouTube:' | 'Vimeo:' | 'Snapchat:' | 'TikTok:', url: string) {
+  async setSocialLink(
+    network: 'Facebook:' | 'X (formerly Twitter):' | 'LinkedIn:' | 'Instagram:' | 'YouTube:' | 'Vimeo:' | 'Snapchat:' | 'TikTok:',
+    url: string,
+  ) {
     await this.socialLinks.field(network).fill(url);
     await this.socialLinks.save();
   }
 
-  async getSocialLink(network: 'Facebook:' | 'X (formerly Twitter):' | 'LinkedIn:' | 'Instagram:' | 'YouTube:' | 'Vimeo:' | 'Snapchat:' | 'TikTok:'): Promise<string> {
+  async getSocialLink(
+    network: 'Facebook:' | 'X (formerly Twitter):' | 'LinkedIn:' | 'Instagram:' | 'YouTube:' | 'Vimeo:' | 'Snapchat:' | 'TikTok:',
+  ): Promise<string> {
     return this.socialLinks.field(network).inputValue();
   }
 

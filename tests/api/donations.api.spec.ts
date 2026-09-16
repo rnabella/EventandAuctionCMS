@@ -13,8 +13,7 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
   // check (`toContainEqual`) would still pass with a stale row left over from
   // a previous run. Count matching rows and assert a delta on creation
   // instead. `allDonations` pages past the report's default 50-row page.
-  const matchingRowCount = (rows: { totalValue: number; qty: number }[]) =>
-    rows.filter((r) => r.totalValue === 1000 && r.qty === 1).length;
+  const matchingRowCount = (rows: { totalValue: number; qty: number }[]) => rows.filter((r) => r.totalValue === 1000 && r.qty === 1).length;
 
   test('a $10 donation is accepted, counts toward totals immediately, and cancelling reverses it', async ({ ems, lite, e2eEvent }) => {
     const pledgeId = (await lite.pledgeItem(e2eEvent.id)).id;
@@ -76,9 +75,10 @@ test.describe('EMS check-in API > donations (validation)', () => {
   });
 
   test('an unknown pledge id returns 404 notFound', async ({ ems, e2eEvent }) => {
-    await expect(
-      ems.checkin.makeDonation(e2eEvent.id, e2eEvent.apiGuestId, { pledgeId: ZERO_UUID, amount: 1000 }),
-    ).rejects.toMatchObject({ status: 404, code: 'notFound' });
+    await expect(ems.checkin.makeDonation(e2eEvent.id, e2eEvent.apiGuestId, { pledgeId: ZERO_UUID, amount: 1000 })).rejects.toMatchObject({
+      status: 404,
+      code: 'notFound',
+    });
   });
 
   test('cancelling an unknown donation returns 404 notFound', async ({ ems, e2eEvent }) => {

@@ -31,7 +31,10 @@ export class TicketsPage extends BasePage {
   }
 
   private get statusCombobox() {
-    return this.page.getByRole('combobox').filter({ hasText: /Active|Inactive/ }).first();
+    return this.page
+      .getByRole('combobox')
+      .filter({ hasText: /Active|Inactive/ })
+      .first();
   }
 
   private get saveButton() {

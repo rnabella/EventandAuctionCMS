@@ -32,7 +32,9 @@ export async function ensureTicketSellable(ems: EmsApi, eventId: string, ticketI
     return ticket;
   }
   const { created, updated, ticketType, ...editable } = ticket;
-  void created; void updated; void ticketType; // server-owned / immutable — excluded from the payload
+  void created;
+  void updated;
+  void ticketType; // server-owned / immutable — excluded from the payload
   await ems.tickets.update(eventId, ticketId, {
     ...editable,
     status: 'active',

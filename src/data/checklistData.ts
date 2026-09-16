@@ -14,7 +14,7 @@ export const CHECKLIST_SECTIONS: Record<string, string[]> = {
     'Add sponsor highlights',
     'Set up your dedicated Event Page',
   ],
-  'Ticketing': [
+  Ticketing: [
     'Configure your ticket settings',
     'Update the ticket details',
     'Create your tickets',
@@ -27,9 +27,7 @@ export const CHECKLIST_SECTIONS: Record<string, string[]> = {
     'Upload your inventory auction items',
     'Thank your item donors',
   ],
-  'Donations': [
-    'Configure your donation settings',
-  ],
+  Donations: ['Configure your donation settings'],
   'Payment Collection': [
     'Set up Stripe account for payment collection',
     'Set up the ability for DAF Pay. Provide your EIN number',
@@ -40,16 +38,12 @@ export const CHECKLIST_SECTIONS: Record<string, string[]> = {
     'Create & Design your Event Display Screens within Event Display & Totalizer > Settings',
     'Share with your onsite AV team to display.',
   ],
-  'Notifications': [
+  Notifications: [
     'Review our recommended communication strategy guide',
     'Review & update the default system notifications',
     'Draft, schedule & test your custom notifications',
   ],
-  'Guest Details': [
-    'Upload your guest information',
-    'Add your guests to their tables',
-  ],
+  'Guest Details': ['Upload your guest information', 'Add your guests to their tables'],
 };
 
-export const CHECKLIST_TOTAL_ITEM_COUNT = Object.values(CHECKLIST_SECTIONS)
-  .reduce((total, items) => total + items.length, 0);
+export const CHECKLIST_TOTAL_ITEM_COUNT = Object.values(CHECKLIST_SECTIONS).reduce((total, items) => total + items.length, 0);

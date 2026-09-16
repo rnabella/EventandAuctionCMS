@@ -11,12 +11,7 @@ import { CheckoutPage } from '../../src/pages/lite/CheckoutPage';
 
 // Serial within the file; `npm run test:e2e` runs lite-e2e with --workers=1.
 test.describe.serial('Lite UI > Silent auction (donor journey, verified via the EMS API)', () => {
-  test('a new donor bids the minimum $25 on the silent lot and it shows as Winning', async ({
-    page,
-    ems,
-    lite,
-    e2eEvent,
-  }) => {
+  test('a new donor bids the minimum $25 on the silent lot and it shows as Winning', async ({ page, ems, lite, e2eEvent }) => {
     test.setTimeout(240_000);
     const donor = newE2EDonor();
 
@@ -59,17 +54,14 @@ test.describe.serial('Lite UI > Silent auction (donor journey, verified via the 
         await ems.checkin.cancelBid(e2eEvent.id, guestId, bidId).catch(() => {});
       }
     }
-    await expect.poll(async () => (await lite.lots(e2eEvent.id)).find((l) => l.id === e2eEvent.lotId)?.bidCount, { timeout: 15_000 }).toBe(0);
+    await expect
+      .poll(async () => (await lite.lots(e2eEvent.id)).find((l) => l.id === e2eEvent.lotId)?.bidCount, { timeout: 15_000 })
+      .toBe(0);
   });
 });
 
 test.describe.serial('Lite UI > Silent auction (outbid, verified via the EMS API)', () => {
-  test('the API guest bids first; a new UI donor outbids them and becomes the new top bidder', async ({
-    page,
-    ems,
-    lite,
-    e2eEvent,
-  }) => {
+  test('the API guest bids first; a new UI donor outbids them and becomes the new top bidder', async ({ page, ems, lite, e2eEvent }) => {
     test.setTimeout(240_000);
     const donor = newE2EDonor();
     const firstBid = await ems.checkin.bid(e2eEvent.id, e2eEvent.apiGuestId, { lotId: e2eEvent.lotId, amount: 2500 });
@@ -115,7 +107,9 @@ test.describe.serial('Lite UI > Silent auction (outbid, verified via the EMS API
       }
       await ems.checkin.cancelBid(e2eEvent.id, e2eEvent.apiGuestId, firstBid.id).catch(() => {});
     }
-    await expect.poll(async () => (await lite.lots(e2eEvent.id)).find((l) => l.id === e2eEvent.lotId)?.bidCount, { timeout: 15_000 }).toBe(0);
+    await expect
+      .poll(async () => (await lite.lots(e2eEvent.id)).find((l) => l.id === e2eEvent.lotId)?.bidCount, { timeout: 15_000 })
+      .toBe(0);
   });
 });
 
@@ -157,7 +151,10 @@ test.describe.serial('Lite UI > Buy It Now (donor journey, verified via the EMS 
 
     await expect
       .poll(
-        async () => (await ems.guests.paymentTransactions(e2eEvent.id, guestId)).filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
+        async () =>
+          (await ems.guests.paymentTransactions(e2eEvent.id, guestId))
+            .filter((p) => p.status === 'paid')
+            .reduce((sum, p) => sum + p.amount, 0),
         { timeout: 15_000 },
       )
       .toBe(5000);
