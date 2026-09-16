@@ -14,12 +14,25 @@
     "test:e2e": "playwright test --project=api-setup --project=lite-e2e --workers=1",
     "test:e2e:headed": "playwright test --project=api-setup --project=lite-e2e --workers=1 --headed",
     "test:fundraising": "npm run test:api && npm run test:e2e",
-    "test:all": "npm test && npm run test:fundraising"
+    "test:all": "npm test && npm run test:fundraising",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "ci": "npm run typecheck && npm run lint && npm run format:check"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.0",
     "@types/node": "^26.1.1",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "dotenv": "^17.4.2",
-    "typescript": "^7.0.2"
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.12.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.70.0"
   }
 }

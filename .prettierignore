@@ -1,0 +1,12 @@
+node_modules/
+playwright-report/
+test-results/
+blob-report/
+.superpowers/
+.claude/
+dist/
+package-lock.json
+
+# Hand-formatted prose (tables, deliberate line breaks) — not in scope for this pass.
+*.md
+docs/
