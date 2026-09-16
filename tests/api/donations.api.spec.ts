@@ -13,7 +13,12 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
   // instead. `allDonations` pages past the report's default 50-row page.
   const matchingRowCount = (rows: { totalValue: number; qty: number }[]) => rows.filter((r) => r.totalValue === 1000 && r.qty === 1).length;
 
-  test('a $10 donation is accepted, counts toward totals immediately, and cancelling reverses it', async ({ ems, lite, e2eEvent, totalsDelta }) => {
+  test('a $10 donation is accepted, counts toward totals immediately, and cancelling reverses it', async ({
+    ems,
+    lite,
+    e2eEvent,
+    totalsDelta,
+  }) => {
     const pledgeId = (await lite.pledgeItem(e2eEvent.id)).id;
     const totals = await totalsDelta(e2eEvent.id);
     const rowsBefore = matchingRowCount(await ems.reports.allDonations(e2eEvent.id));
