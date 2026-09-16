@@ -1,4 +1,4 @@
-# Givergy QA Automation Platform
+#  QA Automation CMS Platform
 
 Playwright + TypeScript automation for the Givergy CMS and Lite UI, organized as a Page Object Model.
 
