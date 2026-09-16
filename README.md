@@ -189,6 +189,20 @@ purpose, so `checklist.spec.ts`'s "every item" and "completion percentage"
 tests aren't expected to pass as-is against a UK event; the section-heading
 test (including the "Prize Draw" section below) does.
 
+**UK support is scoped to the CMS checklist suite only, deliberately — not the
+fundraising/donor-journey suite.** Checked live 2026-09-16: this UK event's
+`Payment Settings` shows `Currency: GBP`, `Country Code: GB`, and fees
+displayed in `£`. Every donor-journey page object and `src/utils/money.ts`
+itself is hardcoded to USD formatting and literal `"$"` locators (e.g.
+`` `Donate \$${usdWhole(amountCents)}` ``) — porting the fundraising suite to
+UK means making money formatting currency-aware throughout, not just
+creating GBP fixtures, since that code path is shared with every US test.
+Also spotted, not yet resolved either way: the UK CMS nav shows **"Prize
+Draws"** as its own top-level section where US shows "Raffles" — unconfirmed
+whether that's the same GLI-licensed feature under different regional
+product copy, or something genuinely different. Don't assume either way
+without checking live first.
+
 ## Structure
 
 ```
