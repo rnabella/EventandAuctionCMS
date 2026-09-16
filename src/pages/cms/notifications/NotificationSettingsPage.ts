@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 import { BasePage } from '../../BasePage';
 import { NOTIFICATIONS_ROUTES } from '../../../data/cmsRoutes';
 
@@ -29,6 +29,7 @@ export class NotificationSettingsPage extends BasePage {
     await this.saveButton.waitFor({ state: 'visible' });
   }
 
+  /** Clicks Save and waits for it to go back to disabled, confirming the save round-trip completed. */
   async setSmsKeyword(keyword: string) {
     await this.smsKeywordInput.fill(keyword);
     await this.smsKeywordInput.blur();
@@ -36,6 +37,7 @@ export class NotificationSettingsPage extends BasePage {
       return;
     }
     await this.saveButton.click();
+    await expect(this.saveButton).toBeDisabled();
   }
 
   async getSmsKeyword(): Promise<string> {

@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 import { BasePage } from '../BasePage';
 import { EVENT_DISPLAYS_ROUTES } from '../../data/cmsRoutes';
 
@@ -46,6 +46,12 @@ export class EventDisplaySettingsPage extends BasePage {
     await this.themeColourInput.waitFor({ state: 'visible' });
   }
 
+  /**
+   * Clicks Save and waits for it to go back to disabled, confirming the save round-trip
+   * completed — without this, navigating away immediately after clicking (as the checklist
+   * spec's "reload and re-read" verification does) can race the actual persist, verified
+   * live 2026-09-16 (the write was real, just not always finished before the reload fired).
+   */
   async setThemeColour(hex: string) {
     await this.themeColourInput.fill(hex);
     await this.themeColourInput.blur();
@@ -53,6 +59,7 @@ export class EventDisplaySettingsPage extends BasePage {
       return; // nothing changed
     }
     await this.saveButton.click();
+    await expect(this.saveButton).toBeDisabled();
   }
 
   async getThemeColour(): Promise<string> {
