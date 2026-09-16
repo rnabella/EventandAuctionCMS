@@ -253,6 +253,14 @@ export class EmsApi {
      * Places a bid on a lot on the guest's behalf. Bare payload, HTTP 200 even
      * when the bid is rejected in-band (`code: "below_minimum" | "below_increase"`).
      * Never appears in `guests.checkout()` — verify via `reports.bids` / `LiteApi.lots`.
+     *
+     * KNOWN QUIRK, verified live 2026-09-16: while a bid is accepted and NOT yet cancelled, it
+     * transiently counts toward `reports.totals` — `silentAuction.raised`/`itemsSold` and, through
+     * those, the top-level `totalRaised`/`charityProfit` — even though nothing has been paid and
+     * the bid never appears in `guests.checkout()`. Cancelling the bid reverses it. Any test that
+     * reads the top-level `totalRaised` (not a type-scoped field like `donation.raised`, which bids
+     * never touch) can observe a real but temporary inflation if it happens to run while another
+     * test's bid is active — poll for the expected value rather than reading it once.
      */
     bid: (eventId: string, guestId: string, body: { lotId: string; amount: number; anonymous?: boolean; autoSell?: boolean }) =>
       this.http.post<CheckinBidResult>(`checkin/v1/events/${eventId}/guests/${guestId}/bids`, {

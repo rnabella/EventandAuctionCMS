@@ -43,7 +43,12 @@ test.describe.serial('EMS check-in API > donations (create / cancel)', () => {
     // other "new row every run" entity in this project (see README).
     const after = await totals.now();
     expect(after.donation.totalDonation).toBe(totals.before.donation.totalDonation);
-    expect(after.totalRaised).toBe(totals.before.totalRaised);
+    // Polled, not a single read: an active (uncancelled) bid elsewhere in the suite transiently
+    // counts toward the top-level totalRaised (see EmsApi.checkin.bid's docblock) — a single-shot
+    // read here can land mid-bid and see a real but temporary inflation from a concurrent test.
+    // `donation.raised`/`totalDonation` above are immune (bids don't touch the donation sub-object),
+    // so only this cross-cutting aggregate needs the same poll-until-settled treatment.
+    await totals.expectDelta((t) => t.totalRaised, 0);
   });
 
   test('cancelling the same donation twice is idempotent', async ({ ems, lite, e2eEvent }) => {

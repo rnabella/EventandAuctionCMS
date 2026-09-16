@@ -649,6 +649,26 @@ just enough to avoid it.
   404s on an unknown id (and separately, sc-98155, 500s on cancelling a real
   one). Don't assume every `.../cancel` endpoint in this API behaves the same
   way — check each one.
+- **An active (not-yet-cancelled) bid transiently counts toward
+  `reports/totals`** — verified live 2026-09-16: while a bid is accepted and
+  uncancelled, `silentAuction.raised`/`itemsSold` (and, through those, the
+  top-level `totalRaised`/`charityProfit`) are inflated by the bid amount,
+  even though nothing has been paid and the bid never appears in
+  `guests.checkout()`. Cancelling the bid reverses it. This caused a real,
+  reproducible **cross-file race in `test:api`**: `donations.api.spec.ts`
+  snapshots `reports/totals` before/after its own donation and asserts the
+  top-level `totalRaised` is unchanged — a plain, single-shot equality check
+  that can land while a concurrently-running test in `lots.api.spec.ts` has
+  an active bid, seeing a real but temporary inflation from someone else's
+  test. Reproduced empirically (3 failures in 8 full `npm run test:api` runs,
+  same `+2500` — one $25 bid's worth — delta every time) before being fixed
+  by polling that assertion the same way `donation.raised` already was,
+  rather than reading it once — `donation.raised`/`totalDonation` are immune
+  (bids never touch the donation sub-object), so only cross-cutting
+  aggregates like top-level `totalRaised` need this treatment. When a test
+  reads a shared aggregate field instead of a type-scoped one, assume
+  something else in the suite can transiently move it and poll, don't read
+  once.
 
 #### GLI Raffle (Lite UI + API) gotchas
 
