@@ -16,7 +16,7 @@ test.describe('EMS iBid API > fixture lots', () => {
 });
 
 test.describe('EMS iBid API > fixture lot health', () => {
-  test('api-setup leaves all three fixture lots sellable', async ({ ems, e2eEvent }) => {
+  test('api-setup leaves all three fixture lots sellable', { tag: '@smoke' }, async ({ ems, e2eEvent }) => {
     for (const [id, expectedMode] of [
       [e2eEvent.lotId, undefined],
       [e2eEvent.buyNowLotId, 'buy_now'],

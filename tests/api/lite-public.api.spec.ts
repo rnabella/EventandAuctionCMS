@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 
 test.describe('Lite public API > E2E event', () => {
-  test('the event accepts card payments via Stripe in USD', async ({ lite, e2eEvent }) => {
+  test('the event accepts card payments via Stripe in USD', { tag: '@smoke' }, async ({ lite, e2eEvent }) => {
     const event = await lite.event(e2eEvent.id);
     expect(event).toMatchObject({
       id: e2eEvent.id,

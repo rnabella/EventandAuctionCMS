@@ -10,7 +10,7 @@ export const CMS_ADMIN_AUTH_FILE = path.join(__dirname, '../../playwright/.auth/
  * so that ordinary test specs can start already-authenticated via `storageState`,
  * instead of repeating the UI login flow in every test.
  */
-setup('authenticate as admin', async ({ page }) => {
+setup('authenticate as admin', { tag: '@smoke' }, async ({ page }) => {
   const loginPage = new LoginPage(page);
   await loginPage.goto();
   await loginPage.login(env.cms.username, env.cms.password);
