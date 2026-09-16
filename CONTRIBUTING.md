@@ -26,7 +26,9 @@ If `npm run lint` reports fixable issues, `npm run lint:fix` handles most of the
 
 - Touched anything under `tests/cms/` or `src/pages/cms/`: `npm test`
 - Touched anything under `tests/api/`, `tests/e2e/`, or `src/api/`/`src/pages/lite/`: `npm run test:fundraising`
-- Unsure: run both (`npm run test:all`)
+- Unsure: run both (`npm run test:all`, also called the regression suite — `npm run test:regression` is an alias)
+
+For a fast sanity check while iterating locally (not a substitute for the suite(s) above before opening a PR): `npm run test:smoke`.
 
 A pre-existing, documented flake or two is expected (see README's "Testing gotchas" section) — if something new and unrelated to your change fails, investigate before assuming it's pre-existing; don't wave it away without checking.
 
@@ -48,7 +50,7 @@ Every existing area (donations, tickets, silent auction / buy-now / sealed biddi
 3. **Page objects, not locators-in-tests.** New UI surfaces get a page object under `src/pages/lite/` (or `src/pages/cms/` for CMS-side work), following `LiteBasePage`'s pattern. A test file should read like a user journey, not a locator dump.
 4. **Two spec files per slice**, matching the existing pairs (`tests/api/<feature>.api.spec.ts`, `tests/e2e/<feature>.spec.ts`): a fast, parallel API-only suite for validation/edge cases, and a slower, serial full-journey e2e test through the real UI with a real Stripe test-card payment where applicable.
 5. **Self-cleaning, always.** Every test that creates real data must remove it — cancel a bid/purchase/subscription in a `finally` (or, if a test-timeout could skip a body-local `finally`, in `afterEach` instead — see `tests/e2e/recurring-donation.spec.ts` for why that distinction mattered for a real-money-adjacent feature). A test that leaves stray state behind breaks every test that runs after it against the same shared fixtures.
-6. **Document what you found**, not just what you built: add a "gotchas" entry to `README.md` for anything surprising or easy to get wrong (a masking behavior, a field that means something different than its name suggests, a race condition and its fix). Future contributors — including future you — read these before making the same mistake.
+6. **Document what you found**, not just what you built: add a "gotchas" entry to `README.md` for anything surprising or easy to get wrong (a masking behavior, a field that means something different than its name suggests, a race condition and its fix). Future contributors — including future you — read these before making the same mistake. Most new slices won't need a new `@smoke` tag (README's "Smoke suite" already covers login/checklist/CMS-write/API-read sanity with 7 tests) — only add one if the slice introduces a genuinely new fundamental dependency, to prevent smoke scope creep.
 
 ## Code review expectations
 

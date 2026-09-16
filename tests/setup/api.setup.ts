@@ -11,7 +11,7 @@ import { ensureRaffleSellable } from '../../src/api/raffleFixture';
  * how cms.setup.ts persists the CMS browser session. Also proves the token is
  * good for the E2E event before any test relies on it.
  */
-setup('authenticate against the EMS API and prepare fixtures', async ({ request }) => {
+setup('authenticate against the EMS API and prepare fixtures', { tag: '@smoke' }, async ({ request }) => {
   const token = await EmsApi.login(request, env.cms.username, env.cms.password);
   writeEmsToken(token);
   const ems = new EmsApi(request, token);

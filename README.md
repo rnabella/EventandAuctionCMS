@@ -54,13 +54,43 @@ npm run report        # open the last HTML report
 npm run test:api          # EMS/Lite API tests (seconds; fully parallel; self-cleaning)
 npm run test:e2e          # donor journeys on the public Lite UI, one worker
 npm run test:fundraising  # both, api first (they share the same event totals)
-npm run test:all          # checklist suite + fundraising suite
+npm run test:all          # checklist suite + fundraising suite — also called the
+                           # regression suite; `npm run test:regression` is an alias
 ```
 
 These run against a **separate, clean E2E event** (`E2E_EVENT_ID` /
 `E2E_LITE_UI_BASE_URL` in `.env`) — never the checklist suite's
 `TEST_EVENT_ID`, whose accumulating rows would keep moving the totals these
 tests assert deltas on. Design: `docs/superpowers/specs/2026-09-06-fundraising-outcome-suite-design.md`.
+
+### Smoke suite — fast sanity subset
+
+```bash
+npm run test:smoke          # fast "is anything fundamentally broken" check
+npm run test:smoke:headed   # same, headed
+```
+
+A tagged (`{ tag: '@smoke' }`) subset of 7 already-existing tests below —
+not a new suite, not a PR-gate replacement for `npm test` /
+`npm run test:fundraising` above. Everything tagged is read-only or a single
+idempotent write, so a run finishes well under the checklist suite's ~7–8
+minutes (typically under a minute).
+
+| File | Test | Why it's here |
+|---|---|---|
+| `tests/setup/cms.setup.ts` | `authenticate as admin` | `cms-chromium`'s dependency; also the literal "can we log into the CMS" check |
+| `tests/setup/api.setup.ts` | `authenticate against the EMS API and prepare fixtures` | `api`'s dependency; proves EMS API reachability + fixture health |
+| `tests/cms/auth/login.spec.ts` | `logs in successfully with valid credentials` | the CMS's front door; zero data written |
+| `tests/cms/checklist/checklist.spec.ts` | `renders every expected section heading` | fully read-only landing-page check |
+| `tests/cms/website/branding.spec.ts` | `saves the theme colour...` | the one write worth smoke-testing — overwrites the same field every run, unlike a "create a new X" test |
+| `tests/api/lite-public.api.spec.ts` | `the event accepts card payments via Stripe in USD` | read-only GET confirming E2E event/Stripe config |
+| `tests/api/lots.api.spec.ts` | `api-setup leaves all three fixture lots sellable` | read-only GET, also validates `api-setup`'s fixture repair |
+
+`lite-e2e` (donor journeys) is deliberately excluded: it's serial and drives
+a real Stripe test-mode checkout, which would create real purchase/
+subscription records on every quick sanity run — the opposite of what
+"smoke" is for. Full donor-journey coverage stays in `test:fundraising` /
+`test:all` only.
 
 The pure-API donation tests (`tests/api/donations.api.spec.ts`) additionally
 depend on `E2E_API_GUEST_ID` — a manual precondition, not something any setup

@@ -3,7 +3,7 @@ import { LoginPage } from '../../../src/pages/cms/LoginPage';
 import { env } from '../../../src/config/env';
 
 test.describe('CMS Authentication', () => {
-  test('logs in successfully with valid credentials', async ({ page }) => {
+  test('logs in successfully with valid credentials', { tag: '@smoke' }, async ({ page }) => {
     const loginPage = new LoginPage(page);
 
     await loginPage.goto();

@@ -11,7 +11,7 @@ test.describe('CMS Event Checklist', () => {
     await checklistPage.goto(env.testEventId);
   });
 
-  test('renders every expected section heading', async () => {
+  test('renders every expected section heading', { tag: '@smoke' }, async () => {
     const sectionNames = await checklistPage.getSectionNames();
     expect(sectionNames).toEqual(Object.keys(CHECKLIST_SECTIONS));
   });
