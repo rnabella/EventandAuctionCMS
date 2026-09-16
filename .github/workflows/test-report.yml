@@ -1,0 +1,83 @@
+name: Test Report
+
+# Manual only, deliberately — this runs the real checklist + fundraising suites against the live
+# Integration environment (real credentials, real accumulating test data, and for the
+# recurring-donations slice, a real Stripe test-mode subscription the test itself cancels). See
+# ci.yml for the typecheck/lint/format checks that DO run automatically on every push/PR.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '25'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Write .env from secrets
+        env:
+          CMS_BASE_URL: ${{ secrets.CMS_BASE_URL }}
+          CMS_USERNAME: ${{ secrets.CMS_USERNAME }}
+          CMS_PASSWORD: ${{ secrets.CMS_PASSWORD }}
+          TEST_EVENT_ID: ${{ secrets.TEST_EVENT_ID }}
+          LITE_UI_BASE_URL: ${{ secrets.LITE_UI_BASE_URL }}
+          E2E_EVENT_ID: ${{ secrets.E2E_EVENT_ID }}
+          E2E_LITE_UI_BASE_URL: ${{ secrets.E2E_LITE_UI_BASE_URL }}
+          E2E_API_GUEST_ID: ${{ secrets.E2E_API_GUEST_ID }}
+          E2E_TICKET_ID: ${{ secrets.E2E_TICKET_ID }}
+          E2E_LOT_ID: ${{ secrets.E2E_LOT_ID }}
+          E2E_BUYNOW_LOT_ID: ${{ secrets.E2E_BUYNOW_LOT_ID }}
+          E2E_SEALED_LOT_ID: ${{ secrets.E2E_SEALED_LOT_ID }}
+          E2E_RAFFLE_ID: ${{ secrets.E2E_RAFFLE_ID }}
+          EMS_API_BASE_URL: ${{ secrets.EMS_API_BASE_URL }}
+          LITE_API_BASE_URL: ${{ secrets.LITE_API_BASE_URL }}
+        # Values come through as shell env vars (see `env:` above), not interpolated directly into
+        # this script, so a secret containing shell-special characters can't break out of context.
+        run: |
+          cat <<EOF > .env
+          ENV_NAME=ci
+          CMS_BASE_URL=$CMS_BASE_URL
+          CMS_USERNAME=$CMS_USERNAME
+          CMS_PASSWORD=$CMS_PASSWORD
+          TEST_EVENT_ID=$TEST_EVENT_ID
+          LITE_UI_BASE_URL=$LITE_UI_BASE_URL
+          LITE_UI_SKIP_HOLDING=
+          E2E_EVENT_ID=$E2E_EVENT_ID
+          E2E_LITE_UI_BASE_URL=$E2E_LITE_UI_BASE_URL
+          E2E_API_GUEST_ID=$E2E_API_GUEST_ID
+          E2E_TICKET_ID=$E2E_TICKET_ID
+          E2E_LOT_ID=$E2E_LOT_ID
+          E2E_BUYNOW_LOT_ID=$E2E_BUYNOW_LOT_ID
+          E2E_SEALED_LOT_ID=$E2E_SEALED_LOT_ID
+          E2E_RAFFLE_ID=$E2E_RAFFLE_ID
+          EMS_API_BASE_URL=$EMS_API_BASE_URL
+          LITE_API_BASE_URL=$LITE_API_BASE_URL
+          EOF
+
+      - name: Run checklist + fundraising suites
+        run: npm run test:all
+        continue-on-error: true
+        id: run_tests
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Fail the job if tests failed
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1

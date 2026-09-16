@@ -228,6 +228,22 @@ whether that's the same GLI-licensed feature under different regional
 product copy, or something genuinely different. Don't assume either way
 without checking live first.
 
+### Viewing a full test report
+
+`.github/workflows/test-report.yml` runs the checklist + fundraising suites
+(`npm run test:all`) against the live US Integration environment and
+publishes the Playwright HTML report as a downloadable build artifact.
+**Manual only, deliberately** — unlike `ci.yml` (typecheck/lint/format,
+which runs on every push/PR), this hits real credentials, writes real
+accumulating test data, and creates a real Stripe test-mode subscription
+that the recurring-donations test itself cancels. Trigger it from the
+**Actions** tab → **Test Report** → **Run workflow**, or `gh workflow run
+test-report.yml`. Once it finishes, open the run and download the
+`playwright-report` artifact (a zip — extract and open `index.html`) from
+the run's summary page. Credentials live in this repo's Actions secrets
+(`CMS_USERNAME`, `CMS_PASSWORD`, `TEST_EVENT_ID`, and the `E2E_*` fixture
+ids/URLs — same values as `.env`), not in the workflow file itself.
+
 ## Structure
 
 ```
