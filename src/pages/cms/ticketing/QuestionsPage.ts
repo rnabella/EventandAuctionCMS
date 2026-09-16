@@ -38,8 +38,14 @@ export class QuestionsPage extends BasePage {
    * that only exists for a row currently being added/edited. Check the
    * rendered text instead of an input value.
    */
+  // Polls rather than a single-shot count — see DonorsPage.hasDonor's docblock for why.
   async hasQuestion(questionText: string): Promise<boolean> {
-    return (await this.page.getByText(questionText, { exact: true }).count()) > 0;
+    return this.page
+      .getByText(questionText, { exact: true })
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /**

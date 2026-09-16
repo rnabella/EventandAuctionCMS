@@ -21,13 +21,17 @@ export class CampaignItemsPage extends BasePage {
   async goto(eventId: string) {
     await this.page.goto(`events/${eventId}/${AUCTION_ITEMS_ROUTES.campaignItems}`, { waitUntil: 'networkidle' });
     await this.dismissSettingsOrItemsModalIfPresent();
-    await this.page.getByRole('button', { name: 'CREATE NEW ITEM' }).waitFor({ state: 'visible' });
-    // Dismissing the modal (when present) triggers its own list fetch that the
-    // initial navigation's networkidle doesn't cover — without waiting for it
-    // too, `hasActiveItem` right after `goto()` can read the list before a
-    // just-added item has loaded. Only surfaced once accumulated test data
-    // cleanup made this page fast enough for the two waits to actually race.
+    // Dismissing the modal (when present) triggers its own list fetch that the initial
+    // navigation's networkidle doesn't cover — without waiting for it too, `hasActiveItem` right
+    // after `goto()` can read the list before a just-added item has loaded. Only surfaced once
+    // accumulated test data cleanup made this page fast enough for the two waits to actually race.
+    // This wait must come BEFORE the button-visibility check below, not after: the refetch it
+    // waits for can re-render the toolbar (including the button) out from under an
+    // already-passed visibility check, which only surfaced as a real, ~1-in-4 intermittent
+    // failure on Firefox specifically (verified live 2026-09-16) — the button-visible check needs
+    // to be the LAST thing that happens before goto() returns, not the second-to-last.
     await this.page.waitForLoadState('networkidle').catch(() => {});
+    await this.page.getByRole('button', { name: 'CREATE NEW ITEM' }).waitFor({ state: 'visible' });
   }
 
   private async dismissSettingsOrItemsModalIfPresent() {
@@ -79,8 +83,14 @@ export class CampaignItemsPage extends BasePage {
     return id;
   }
 
+  /** Polls rather than a single-shot count — see DonorsPage.hasDonor's docblock for why. */
   async hasActiveItem(title: string): Promise<boolean> {
-    return (await this.page.locator('tr', { hasText: title }).count()) > 0;
+    return this.page
+      .locator('tr', { hasText: title })
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /** Deletes every campaign item with this exact title (also used for Givergy catalog items added to the campaign). */

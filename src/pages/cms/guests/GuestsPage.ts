@@ -88,10 +88,17 @@ export class GuestsPage extends BasePage {
    * (e.g. "[79314] QA Automation Test Table") — this checks for the number,
    * not the name, since that's what's actually reliably displayed.
    */
+  // Polls rather than a single-shot count — see DonorsPage.hasDonor's docblock for why.
   async hasGuestAtTable(lastName: string, tableLabel: string): Promise<boolean> {
     const tableNumberMatch = tableLabel.match(/^\[(\d+)\]/);
     const tableIdentifier = tableNumberMatch ? tableNumberMatch[1] : tableLabel;
-    return (await this.page.locator('tr', { hasText: lastName }).filter({ hasText: tableIdentifier }).count()) > 0;
+    return this.page
+      .locator('tr', { hasText: lastName })
+      .filter({ hasText: tableIdentifier })
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /** Deletes every guest with this exact first name. Used by the maintenance cleanup, not the regular test suite. */

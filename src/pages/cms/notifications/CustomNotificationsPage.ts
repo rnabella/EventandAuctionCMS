@@ -74,8 +74,18 @@ export class CustomNotificationsPage extends BasePage {
     await expect(draftsTab).toHaveAttribute('aria-selected', 'true');
   }
 
+  /**
+   * Polls rather than a single-shot count — same reasoning as DonorsPage.hasDonor: the list is
+   * populated by an async fetch after navigation, and a one-shot check can lose that race on some
+   * browser engines (verified live 2026-09-16: reproducible on Firefox, not Chromium).
+   */
   async hasDraftWithMailingList(mailingListColumnText: string): Promise<boolean> {
-    return (await this.page.locator('tr', { hasText: mailingListColumnText }).count()) > 0;
+    return this.page
+      .locator('tr', { hasText: mailingListColumnText })
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /**

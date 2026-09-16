@@ -37,8 +37,18 @@ export class TablesPage extends BasePage {
 
   // The tables list renders as cards (Name/Number/Guests Assigned + action
   // buttons), not an HTML table — unlike the Guests list, `tr` never matches here.
+  /**
+   * Polls rather than a single-shot count — same reasoning as DonorsPage.hasDonor: the list is
+   * populated by an async fetch after navigation, and a one-shot check can lose that race on some
+   * browser engines (verified live 2026-09-16: reproducible on Firefox, not Chromium).
+   */
   async hasTable(name: string): Promise<boolean> {
-    return (await this.page.getByText(name, { exact: true }).count()) > 0;
+    return this.page
+      .getByText(name, { exact: true })
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /** Deletes every table with this exact name. Used by the maintenance cleanup, not the regular test suite. */

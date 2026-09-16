@@ -44,6 +44,11 @@ export class EventDisplaySettingsPage extends BasePage {
     await this.screenDropdown.click();
     await this.page.getByRole('option', { name: screenName }).click();
     await this.themeColourInput.waitFor({ state: 'visible' });
+    // The input can become visible before its value has actually populated — an async fetch
+    // after selection — verified live 2026-09-16 as a real, reproducible WebKit-specific race
+    // (getThemeColour() read "" right after this returned). Wait for a real value, not just
+    // visibility, since every screen always has some colour once fully loaded.
+    await expect(this.themeColourInput).not.toHaveValue('');
   }
 
   /**

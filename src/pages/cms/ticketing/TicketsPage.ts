@@ -69,9 +69,14 @@ export class TicketsPage extends BasePage {
     return this.page.locator('tr', { hasText: title });
   }
 
+  // Polls rather than a single-shot count — see DonorsPage.hasDonor's docblock for why.
   async hasTicketWithTitleAndPrice(title: string, price: number): Promise<boolean> {
     const row = this.ticketRow(title).filter({ hasText: `$ ${price}` });
-    return (await row.count()) > 0;
+    return row
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /** Deletes every ticket with this exact title. Used by the maintenance cleanup, not the regular test suite. */

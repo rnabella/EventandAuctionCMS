@@ -41,8 +41,18 @@ export class DonorsPage extends BasePage {
     return this.page.locator('tr', { hasText: name });
   }
 
+  /**
+   * Polls rather than a single-shot count: the list is populated by an async fetch after
+   * navigation, and how long that takes relative to `goto()`'s `networkidle` wait varies enough
+   * by browser engine (verified live 2026-09-16: reproducible on Firefox, not Chromium) that a
+   * one-shot check can read the list before a just-created row has actually landed.
+   */
   async hasDonor(name: string): Promise<boolean> {
-    return (await this.donorRow(name).count()) > 0;
+    return this.donorRow(name)
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   async selectDonor(name: string) {

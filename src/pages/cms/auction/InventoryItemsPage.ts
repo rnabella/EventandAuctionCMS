@@ -76,8 +76,14 @@ export class InventoryItemsPage extends BasePage {
     return match[1];
   }
 
+  /** Polls rather than a single-shot count — see DonorsPage.hasDonor's docblock for why. */
   async hasInventoryItem(title: string): Promise<boolean> {
-    return (await this.page.locator('tr', { hasText: title }).count()) > 0;
+    return this.page
+      .locator('tr', { hasText: title })
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /** Deletes every inventory item with this exact title. Used by the maintenance cleanup, not the regular test suite. */

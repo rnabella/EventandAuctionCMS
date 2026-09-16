@@ -30,9 +30,17 @@ export class PromotionCodesPage extends BasePage {
     await this.saveButton.click();
   }
 
-  /** Same as QuestionsPage.hasQuestion: a saved row collapses to read-only text, not an input. */
+  /**
+   * Same as QuestionsPage.hasQuestion: a saved row collapses to read-only text, not an input.
+   * Polls rather than a single-shot count — see DonorsPage.hasDonor's docblock for why.
+   */
   async hasPromotionCode(code: string): Promise<boolean> {
-    return (await this.page.getByText(code, { exact: true }).count()) > 0;
+    return this.page
+      .getByText(code, { exact: true })
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /** Deletes every promotion code with this exact code. Same 3-step dance as QuestionsPage.deleteAllWithText. */
