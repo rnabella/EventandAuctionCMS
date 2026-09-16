@@ -1,10 +1,27 @@
 import { defineConfig, devices } from '@playwright/test';
 import { env } from './src/config/env';
 
-// Detect `--project=lite-e2e` / `--project lite-e2e` on the CLI so `workers`
-// (a global, not per-project, setting) can be forced to 1 whenever the
-// lite-e2e project is selected — see the `lite-e2e` project below for why.
-const runsLiteE2E = process.argv.some((arg) => /(^|[=\s])lite-e2e$/.test(arg) || arg === 'lite-e2e');
+// Detect `--project=lite-e2e` / `--project lite-e2e` (or one of its cross-browser
+// siblings, e.g. `lite-e2e-firefox`) on the CLI so `workers` (a global, not
+// per-project, setting) can be forced to 1 whenever any of them is selected —
+// see the `lite-e2e` project below for why.
+const runsLiteE2E = process.argv.some((arg) => /(^|[=\s])lite-e2e(-[\w-]+)?$/.test(arg) || /^lite-e2e(-[\w-]+)?$/.test(arg));
+
+/**
+ * Extra browser engines beyond the default Chromium used by every project below. Each gets its
+ * own sibling project (`cms-firefox`, `lite-e2e-webkit`, ...) rather than replacing the default,
+ * so `npm test` / `npm run test:e2e` stay exactly as fast and unchanged as before — cross-browser
+ * runs are opt-in via their own scripts (`npm run test:firefox`, `test:e2e:webkit`, etc.).
+ * WebKit is the closest Playwright gets to Safari on Windows/Linux — there is no way to drive real
+ * macOS Safari from this machine. `channel: 'chrome'` drives the actually-installed Google Chrome
+ * binary (must be installed separately — `npx playwright install` does not fetch it), distinct
+ * from the bundled Chromium every other project here already uses.
+ */
+const EXTRA_BROWSERS = [
+  { suffix: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' as const } },
+  { suffix: 'firefox', use: devices['Desktop Firefox'] },
+  { suffix: 'webkit', use: devices['Desktop Safari'] },
+];
 
 export default defineConfig({
   testDir: './tests',
@@ -92,5 +109,29 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['api-setup'],
     },
+
+    // Cross-browser siblings (see EXTRA_BROWSERS above) — same testDir/dependency shape as their
+    // Chromium counterparts, just a different engine. `cms-*` projects reuse the SAME storageState
+    // `setup` already produced (cookies/localStorage are engine-agnostic data, not something that
+    // needs a separate login per browser) rather than logging in three more times.
+    ...EXTRA_BROWSERS.map(({ suffix, use }) => ({
+      name: `cms-auth-${suffix}`,
+      testDir: './tests/cms/auth',
+      use,
+    })),
+    ...EXTRA_BROWSERS.map(({ suffix, use }) => ({
+      name: `cms-${suffix}`,
+      testDir: './tests/cms',
+      testIgnore: '**/auth/**',
+      use: { ...use, storageState: 'playwright/.auth/admin.json' },
+      dependencies: ['setup'],
+    })),
+    ...EXTRA_BROWSERS.map(({ suffix, use }) => ({
+      name: `lite-e2e-${suffix}`,
+      testDir: './tests/e2e',
+      fullyParallel: false,
+      use,
+      dependencies: ['api-setup'],
+    })),
   ],
 });

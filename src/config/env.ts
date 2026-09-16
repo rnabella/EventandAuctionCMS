@@ -1,9 +1,17 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+
+// Loads `.env` by default, same as the plain `import 'dotenv/config'` this replaces. Set ENV_FILE
+// to point at a different config instead — e.g. `.env.uk` for the UK environment (see
+// `.env.uk.example`) — without needing a separate copy of every file that imports `env`.
+// PowerShell: `$env:ENV_FILE='.env.uk'; npm run test:chrome`
+// bash:       `ENV_FILE=.env.uk npm run test:chrome`
+dotenv.config({ path: process.env.ENV_FILE || '.env' });
 
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}. Copy .env.example to .env and fill it in.`);
+    const file = process.env.ENV_FILE || '.env';
+    throw new Error(`Missing required environment variable: ${name}. Fill it in in ${file} (see .env.example / .env.uk.example).`);
   }
   return value;
 }

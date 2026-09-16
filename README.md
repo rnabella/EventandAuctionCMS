@@ -115,6 +115,67 @@ reads it in preference to the static `.env` value. The common case (guest
 still valid) costs one extra `checkout()` call (~0.3s); healing costs a real
 browser registration (~15s), only when actually needed.
 
+### Cross-browser
+
+```bash
+npm run test:chrome              # checklist suite, real installed Google Chrome (not Chromium)
+npm run test:firefox             # checklist suite, Firefox
+npm run test:webkit              # checklist suite, WebKit (closest available proxy for Safari)
+npm run test:cross-browser       # checklist suite, all four engines together
+
+npm run test:e2e:chrome          # fundraising donor journeys, real Google Chrome
+npm run test:e2e:firefox         # fundraising donor journeys, Firefox
+npm run test:e2e:webkit          # fundraising donor journeys, WebKit
+npm run test:e2e:cross-browser   # fundraising donor journeys, all four engines, one after another
+```
+
+Every default project (`cms-chromium`, `lite-e2e`, ...) has three siblings —
+`cms-chrome`/`cms-firefox`/`cms-webkit`, `lite-e2e-chrome`/`-firefox`/
+`-webkit`, and the matching `cms-auth-*` — so `npm test` / `npm run test:e2e`
+stay exactly as fast and unchanged as before; cross-browser is opt-in.
+`cms-*` projects reuse the same `playwright/.auth/admin.json` storageState
+`setup` already produces (cookies/localStorage are engine-agnostic data, not
+something that needs a separate login per browser) rather than logging in
+four times. There is no way to drive real macOS Safari from Windows/Linux —
+WebKit, the engine Safari itself is built on, is the closest Playwright gets;
+Playwright's own "Desktop Safari" device preset uses it for the same reason.
+`channel: 'chrome'` drives the actually-installed Google Chrome binary
+(`npx playwright install` does not fetch this — install Chrome separately),
+distinct from the bundled Chromium every default project already uses.
+Firefox and WebKit need `npx playwright install firefox webkit` once.
+
+Verified live 2026-09-16: the CMS login tests, an authenticated read (proving
+the shared storageState works across engines, not just Chromium), and one
+full donor-journey e2e spec (a real Stripe test-card payment through the
+iframe-based card form) all pass on Chrome, Firefox, and WebKit.
+
+### Targeting a different environment
+
+Every script above reads `.env` by default. Set `ENV_FILE` to point at a
+different config instead of hand-editing `.env` back and forth — e.g. for the
+UK environment (`.env.uk`, from `.env.uk.example`):
+
+```bash
+# PowerShell
+$env:ENV_FILE = '.env.uk'; npm run test:chrome
+
+# bash
+ENV_FILE=.env.uk npm run test:chrome
+```
+
+`.env.uk.example` is a starting point, not a verified config — it was built
+from a single URL (`https://uk.test.givergy.com/manage/#events`), confirmed
+to be the same underlying cms-next app on a different domain rather than a
+different product, but **every value in it still needs confirming against
+the real UK environment**, including the base URL's own path (`/manage/`
+there vs. `/cms-next/` for US) and a full set of UK fundraising fixtures
+(ticket/lots/raffle/donation-ready guest) created and verified live the same
+way the US ones were — see `.env.uk.example`'s own comments for specifics.
+The existing Page Object Model (every locator under `src/pages/cms/`) was
+built and verified only against the US `/cms-next/` DOM; if the UK app's
+`/manage/` path renders differently in practice, expect real page-object
+fixes to be needed, not just this config swap.
+
 ## Structure
 
 ```
