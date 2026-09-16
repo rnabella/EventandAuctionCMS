@@ -1,6 +1,5 @@
 import { expect } from '@playwright/test';
 import { LiteBasePage } from '../LiteBasePage';
-import { usd } from '../../../utils/money';
 
 /**
  * `?controller=lots&action=showLot&id=<displayNumber>` — a single lot's page.

@@ -26,6 +26,7 @@ test.describe('EMS iBid API > fixture lot health', () => {
       expect(lot.status).toBe('active');
       expect(lot.hidden).toBe(false);
       expect(lot.numberAvailable).toBeGreaterThanOrEqual(1);
+      // eslint-disable-next-line playwright/no-conditional-expect -- deliberate: not every lot here has a mode to assert.
       if (expectedMode) expect(lot.bidMode).toBe(expectedMode);
     }
   });
@@ -77,7 +78,11 @@ test.describe.serial('EMS check-in API > bids (place / cancel / outbid / sealed 
     await expect.poll(async () => (await liteLot(lite, e2eEvent.id, e2eEvent.lotId)).bidCount, { timeout: 15_000 }).toBe(0);
   });
 
-  test('a sealed lot masks only the bidder name on the public site; bid count and amount fields become a count echo instead, unlike a silent lot which shows the real values', async ({ ems, lite, e2eEvent }) => {
+  test('a sealed lot masks only the bidder name on the public site; bid count and amount fields become a count echo instead, unlike a silent lot which shows the real values', async ({
+    ems,
+    lite,
+    e2eEvent,
+  }) => {
     const sealedBid = await ems.checkin.bid(e2eEvent.id, e2eEvent.apiGuestId, { lotId: e2eEvent.sealedLotId, amount: 2500 });
     const silentBid = await ems.checkin.bid(e2eEvent.id, e2eEvent.apiGuestId, { lotId: e2eEvent.lotId, amount: 2500 });
     try {
@@ -141,14 +146,18 @@ test.describe.serial('EMS check-in API > buy-now purchases', () => {
     try {
       expect(result).toMatchObject({ code: 'accepted', buyNowId: e2eEvent.buyNowLotId, amount: 5000, count: 1 });
       await expect
-        .poll(async () => checkoutBuyNowTotal(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.buyNowLotId), { timeout: 15_000 })
+        .poll(async () => checkoutBuyNowTotal(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.buyNowLotId), {
+          timeout: 15_000,
+        })
         .toBe(beforeTotal + 5000);
     } finally {
       await ems.checkin.cancelBuyNowPurchase(e2eEvent.id, e2eEvent.apiGuestId, result.id);
     }
 
     await expect
-      .poll(async () => checkoutBuyNowTotal(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.buyNowLotId), { timeout: 15_000 })
+      .poll(async () => checkoutBuyNowTotal(await ems.guests.checkout(e2eEvent.id, e2eEvent.apiGuestId), e2eEvent.buyNowLotId), {
+        timeout: 15_000,
+      })
       .toBe(beforeTotal);
   });
 });

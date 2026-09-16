@@ -142,8 +142,7 @@ export class EmsApi {
     get: (eventId: string, lotId: string) => this.http.get<IBidLot>(`v1/iBid/events/${eventId}/lots/${lotId}`),
 
     /** Full-record update — send the whole lot (as returned by `get`) with the changed fields, minus `created`/`updated`/`startPrice` (the last is rejected once the lot has any bids). */
-    update: (eventId: string, lotId: string, lot: IBidLotUpdate) =>
-      this.http.post<unknown>(`v1/iBid/events/${eventId}/lots/${lotId}`, lot),
+    update: (eventId: string, lotId: string, lot: IBidLotUpdate) => this.http.post<unknown>(`v1/iBid/events/${eventId}/lots/${lotId}`, lot),
   };
 
   /**
@@ -214,8 +213,7 @@ export class EmsApi {
      * directly rules that out — no EMS-local-flag-only false positive could produce it. Prefer this
      * method going forward for any record whose `firstBillingDate` has passed.
      */
-    cancel: (eventId: string, recordId: string) =>
-      this.http.put<unknown>(`v1/iBid/events/${eventId}/stripe-subscriptions/${recordId}`, {}),
+    cancel: (eventId: string, recordId: string) => this.http.put<unknown>(`v1/iBid/events/${eventId}/stripe-subscriptions/${recordId}`, {}),
   };
 
   /** Staff-side ("check-in") actions performed on a guest's behalf. */
@@ -280,7 +278,9 @@ export class EmsApi {
 
     /** Idempotent, same as cancelBid — HTTP 200 even for an unknown purchase id. */
     cancelBuyNowPurchase: (eventId: string, guestId: string, purchaseId: string) =>
-      this.http.post<CancelledBuyNowPurchase | null>(`checkin/v1/events/${eventId}/guests/${guestId}/buyNowPurchases/cancel`, { id: purchaseId }),
+      this.http.post<CancelledBuyNowPurchase | null>(`checkin/v1/events/${eventId}/guests/${guestId}/buyNowPurchases/cancel`, {
+        id: purchaseId,
+      }),
 
     /**
      * Idempotent-ish: cancelling an unknown purchase id 404s with `code: "notFound"` (verified

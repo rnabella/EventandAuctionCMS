@@ -59,9 +59,7 @@ export class LiteRegisterPage extends LiteBasePage {
    */
   async submit(): Promise<string> {
     const [response] = await Promise.all([
-      this.page.waitForResponse(
-        (r) => r.request().method() === 'POST' && /\/lite\/v1\/events\/[^/]+\/auth\/guests(\?|$)/.test(r.url()),
-      ),
+      this.page.waitForResponse((r) => r.request().method() === 'POST' && /\/lite\/v1\/events\/[^/]+\/auth\/guests(\?|$)/.test(r.url())),
       this.nextButton.click(),
     ]);
     const body = (await response.json()) as { code: string; message: string; entity: { id: string } | null };

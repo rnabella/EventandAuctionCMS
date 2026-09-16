@@ -26,7 +26,10 @@ export abstract class BasePage {
     const closeButtons = this.page.getByRole('button', { name: 'Close', exact: true });
     const count = await closeButtons.count();
     for (let i = 0; i < count; i++) {
-      await closeButtons.first().click().catch(() => {});
+      await closeButtons
+        .first()
+        .click()
+        .catch(() => {});
     }
   }
 

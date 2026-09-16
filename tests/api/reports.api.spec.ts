@@ -6,9 +6,7 @@ import { env } from '../../src/config/env';
 test.describe('EMS API > auth and reports', () => {
   test('the api-setup token reads totals for the E2E event', async ({ ems, e2eEvent }) => {
     const totals = await ems.reports.totals(e2eEvent.id);
-    expect(totals.donation).toEqual(
-      expect.objectContaining({ totalDonation: expect.any(Number), raised: expect.any(Number) }),
-    );
+    expect(totals.donation).toEqual(expect.objectContaining({ totalDonation: expect.any(Number), raised: expect.any(Number) }));
     expect(totals.totalRaised).toBeGreaterThanOrEqual(totals.donation.raised);
   });
 

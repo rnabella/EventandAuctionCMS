@@ -19,10 +19,7 @@ export default defineConfig({
   // project below) periodically clears the accumulated rows; this timeout is
   // a safety margin on top of that, not a substitute for running it.
   timeout: 90_000,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never' }],
-  ],
+  reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {
     baseURL: env.cms.baseUrl,

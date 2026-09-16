@@ -4,7 +4,9 @@ import { InventoryItemsPage } from '../../../src/pages/cms/auction/InventoryItem
 import { env } from '../../../src/config/env';
 
 test.describe('CMS Auction Items > Inventory Items', () => {
-  test('creates an inventory item for a donor and it appears in the list (checklist: Upload your inventory auction items)', async ({ page }) => {
+  test('creates an inventory item for a donor and it appears in the list (checklist: Upload your inventory auction items)', async ({
+    page,
+  }) => {
     // A donor is a required field on an inventory item, so create one inline
     // rather than depending on donors.spec.ts having already run.
     const donorsPage = new DonorsPage(page);

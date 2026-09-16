@@ -50,10 +50,6 @@ export class PaymentSettingsPage extends BasePage {
     const heading = this.page.getByText('DAFpay', { exact: true }).first();
     const enableCheckbox = this.page.locator('input[name="enableDafPay"]');
     const einLookupLabel = this.page.getByText('EIN/Organisation lookup:', { exact: true });
-    return (
-      (await heading.isVisible().catch(() => false)) &&
-      (await enableCheckbox.count()) > 0 &&
-      (await einLookupLabel.count()) > 0
-    );
+    return (await heading.isVisible().catch(() => false)) && (await enableCheckbox.count()) > 0 && (await einLookupLabel.count()) > 0;
   }
 }

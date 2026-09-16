@@ -19,9 +19,7 @@ export class NavigationMenuPage extends BasePage {
   }
 
   private card(heading: string) {
-    return this.page
-      .getByText(heading, { exact: true })
-      .locator('xpath=ancestor::div[contains(@class,"MuiPaper-root")][1]');
+    return this.page.getByText(heading, { exact: true }).locator('xpath=ancestor::div[contains(@class,"MuiPaper-root")][1]');
   }
 
   get headerMenuCard() {

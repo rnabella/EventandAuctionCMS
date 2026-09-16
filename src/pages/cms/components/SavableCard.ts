@@ -7,12 +7,13 @@ import { Page, expect } from '@playwright/test';
  * wraps that pattern so page objects don't each re-implement it.
  */
 export class SavableCard {
-  constructor(private readonly page: Page, private readonly heading: string) {}
+  constructor(
+    private readonly page: Page,
+    private readonly heading: string,
+  ) {}
 
   get card() {
-    return this.page
-      .getByText(this.heading, { exact: true })
-      .locator('xpath=ancestor::div[contains(@class,"MuiPaper-root")][1]');
+    return this.page.getByText(this.heading, { exact: true }).locator('xpath=ancestor::div[contains(@class,"MuiPaper-root")][1]');
   }
 
   private get saveButton() {

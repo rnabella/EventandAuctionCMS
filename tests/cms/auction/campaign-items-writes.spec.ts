@@ -26,7 +26,9 @@ test.describe.serial('CMS Auction Items > Campaign Items writes (serialized: sha
     expect(await campaignItemsPage.hasActiveItem(title)).toBe(true);
   });
 
-  test('adds a catalog item to the campaign and it appears in Campaign Items (checklist: Add your chosen Givergy Items)', async ({ page }) => {
+  test('adds a catalog item to the campaign and it appears in Campaign Items (checklist: Add your chosen Givergy Items)', async ({
+    page,
+  }) => {
     const givergyItemsPage = new GivergyItemsPage(page);
     await givergyItemsPage.goto(env.testEventId);
 
