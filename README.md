@@ -163,14 +163,17 @@ $env:ENV_FILE = '.env.uk'; npm run test:chrome
 ENV_FILE=.env.uk npm run test:chrome
 ```
 
-`.env.uk.example` is a starting point, not a verified config — it was built
-from a single URL (`https://uk.test.givergy.com/manage/#events`), confirmed
-to be the same underlying cms-next app on a different domain rather than a
-different product, but **every value in it still needs confirming against
-the real UK environment**, including the base URL's own path (`/manage/`
-there vs. `/cms-next/` for US) and a full set of UK fundraising fixtures
-(ticket/lots/raffle/donation-ready guest) created and verified live the same
-way the US ones were — see `.env.uk.example`'s own comments for specifics.
+`.env.uk.example`'s `CMS_BASE_URL`/`CMS_USERNAME`/`CMS_PASSWORD` are
+**confirmed live 2026-09-16** — a real login against
+`https://uk.test.givergy.com/cms-next/` succeeded using the existing Page
+Object Model completely unmodified. An earlier `/manage/#events` URL floated
+for this environment turned out to be the OLD legacy CMS, a different
+product from cms-next — don't use it. Everything else in the template
+(`TEST_EVENT_ID`, `LITE_UI_BASE_URL`, every `E2E_*` fixture id,
+`EMS_API_BASE_URL`/`LITE_API_BASE_URL`) is still an unverified placeholder
+domain-swapped from the US values — confirm each one, and create/verify a
+full set of UK fundraising fixtures (ticket/lots/raffle/donation-ready
+guest) the same way the US ones were, before relying on a run beyond login.
 The existing Page Object Model (every locator under `src/pages/cms/`) was
 built and verified only against the US `/cms-next/` DOM; if the UK app's
 `/manage/` path renders differently in practice, expect real page-object
