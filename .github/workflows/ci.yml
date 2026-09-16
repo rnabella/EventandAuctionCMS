@@ -1,0 +1,35 @@
+name: CI
+
+# Typecheck + lint + format check only — this repo's test suites (npm test, npm run
+# test:fundraising) run against a real, shared Integration environment and, for the
+# recurring-donations slice, create real Stripe test-mode subscriptions. They are
+# intentionally NOT wired into automatic CI here to avoid firing on every push/PR;
+# run them locally or trigger them manually. See README.md's "Setup" section.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '25'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
