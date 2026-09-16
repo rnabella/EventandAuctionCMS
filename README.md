@@ -149,6 +149,31 @@ the shared storageState works across engines, not just Chromium), and one
 full donor-journey e2e spec (a real Stripe test-card payment through the
 iframe-based card form) all pass on Chrome, Firefox, and WebKit.
 
+**`npm run test:cross-browser` runs all four engines concurrently against the
+same shared `TEST_EVENT_ID` event** — the same class of lost-update race
+"Cross-test races" below describes across files, just across engines this
+time (Playwright can't serialize writes across projects any more than across
+files). Verified live 2026-09-16: running it produced far more failures than
+each engine has on its own. For a reliable full-suite read per engine, run
+`test:chrome`/`test:firefox`/`test:webkit` **one at a time**, not the
+combined script, which is better suited to a quick multi-engine sanity check
+than a real correctness read.
+
+Running the *full* checklist suite (not just the spot-checks above) per
+engine found and fixed real, engine-specific races — not flakes: 9
+`hasX(name)` helpers across 8 page objects did a single-shot `.count() > 0`
+check instead of polling for the list's async post-navigation refresh,
+reproducible on Firefox; `CampaignItemsPage.goto()` checked a button's
+visibility before, not after, a refetch that could re-render it away;
+`EventDisplaySettingsPage.selectScreen()` didn't wait for its value to
+actually populate, reproducible on WebKit. All three are fixed. Separately,
+also confirmed live: a meaningful share of *remaining* intermittent
+failures traced to this session's own accumulated test data (`npm run
+cleanup` took one test from sometimes-timing-out to a consistent ~17s), not
+a code bug — periodic cleanup matters more here than on the default
+Chromium-only suites, since running every engine multiplies how fast test
+data accumulates.
+
 ### Targeting a different environment
 
 Every script above reads `.env` by default. Set `ENV_FILE` to point at a
